@@ -1,0 +1,19 @@
+{
+  "name": "@vendredix/ts-transformers",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./index.js",
+  "typings": "./index.d.ts",
+  "engines": {
+    "node": ">=8.1.0"
+  },
+  "author": "Vendredix",
+  "scripts": {
+    "compile": "tsc -p ./tsconfig.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^10.3.2",
+    "typescript": "^2.9.1"
+  }
+}
