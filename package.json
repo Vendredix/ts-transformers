@@ -1,6 +1,6 @@
 {
   "name": "@vendredix/ts-transformers",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "",
   "main": "./index.js",
   "typings": "./index.d.ts",
@@ -11,6 +11,12 @@
   "scripts": {
     "compile": "tsc -p ./tsconfig.json"
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "transformer.js",
+    "transformer.d.ts"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^10.3.2",
