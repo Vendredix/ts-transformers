@@ -19,7 +19,8 @@
   },
   "files": [
     "index.ts",
-    "transformer.ts"
+    "transformer.ts",
+    "compiler.ts"
   ],
   "exclude": [
     "node_modules"
