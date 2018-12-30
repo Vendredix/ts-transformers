@@ -19,6 +19,8 @@ export declare function isArray(value: any): value is Array<any>;
  */
 export declare function isObject(value: any): value is object;
 
+export declare function isObjectOrArray(value: any): value is object | Array<any>;
+
 /***
  * Returns whether the given value is an array of at least a specific number of items.
  *

@@ -40,7 +40,8 @@ import {
   isNull, isUndefined, isNullOrUndefined,
   isBoolean, isNumber, isString, isFunction,
   isPrimitive,
-  isArray, isObject, isMinLengthArray,
+  isArray, isObject, isObjectOrArray,
+  isMinLengthArray,
 } from "@vendredix/ts-transformers";
 
 let value: any;

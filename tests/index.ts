@@ -3,7 +3,7 @@ import {
   isNull, isUndefined, isNullOrUndefined,
   isBoolean, isNumber, isString, isFunction,
   isPrimitive,
-  isArray, isObject, isMinLengthArray,
+  isArray, isObject, isMinLengthArray, isObjectOrArray,
 } from "../index";
 
 declare const enum Permissions {
@@ -59,5 +59,9 @@ if (isMinLengthArray(value)) {
   console.log(value.length >= 1);
 }
 if (isMinLengthArray(value, 2) || isObject(value)) {
+  console.log(value);
+}
+
+if (isObjectOrArray(value)) {
   console.log(value);
 }

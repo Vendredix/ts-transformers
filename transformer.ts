@@ -5,12 +5,13 @@ const typeofMethods = [
   "isNull", "isUndefined", "isNullOrUndefined",
   "isNumber", "isBoolean", "isString", "isFunction",
   "isPrimitive",
-  "isArray", "isObject",
+  "isArray", "isObject", "isObjectOrArray",
   "isMinLengthArray",
 ];
 const typeofTransformMap = {
   "isPrimitive": "isNumberOrBooleanOrString",
   "isObject": "isObjectAndNotNullAndNotArray",
+  "isObjectOrArray": "isObjectAndNotNull",
   "isMinLengthArray": true, // custom
 };
 
