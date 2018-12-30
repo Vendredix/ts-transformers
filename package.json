@@ -15,11 +15,16 @@
     "index.js",
     "index.d.ts",
     "transformer.js",
-    "transformer.d.ts"
+    "transformer.d.ts",
+    "compiler.js",
+    "compiler.d.ts"
   ],
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^10.3.2",
-    "typescript": "^2.9.1"
+    "@types/node": "^10.12.18",
+    "typescript": "^3.2.2"
+  },
+  "peerDependencies": {
+    "typescript": "^3.2.2"
   }
 }
