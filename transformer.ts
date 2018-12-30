@@ -7,12 +7,15 @@ const typeofMethods = [
   "isPrimitive",
   "isArray", "isObject", "isObjectOrArray",
   "isMinLengthArray",
+  "isNonEmptyString", "isMinLengthString",
 ];
 const typeofTransformMap = {
   "isPrimitive": "isNumberOrBooleanOrString",
   "isObject": "isObjectAndNotNullAndNotArray",
   "isObjectOrArray": "isObjectAndNotNull",
   "isMinLengthArray": true, // custom
+  "isNonEmptyString": true,
+  "isMinLengthString": true,
 };
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
@@ -74,7 +77,7 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
 
   const [arg0] = args;
 
-  if (methodName === "isMinLengthArray") {
+  if (["isMinLengthArray", "isNonEmptyString", "isMinLengthString"].includes(methodName)) {
     let lengthArg: ts.Expression;
 
     // Determine the length argument
@@ -88,12 +91,14 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
       lengthArg = arg0;
     }
     else {
-      throw new Error("Invalid length argument for isMinLengthArray!");
+      throw new Error(`Invalid length argument for ${methodName}!`);
     }
+
+    const type = methodName.split(/(?=[A-Z])/).pop()!;
 
     // Create `isArray(value) && value.length >= length` expression.
     return ts.createBinary(
-      createTypeOfExpression(program,"Array", valueExpr),
+      createTypeOfExpression(program, type, valueExpr),
       ts.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
       ts.createBinary(
         ts.createPropertyAccess(valueExpr, "length"),

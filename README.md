@@ -42,6 +42,7 @@ import {
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isMinLengthArray,
+  isNonEmptyString, isMinLengthString,
 } from "@vendredix/ts-transformers";
 
 let value: any;
