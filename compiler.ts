@@ -1,7 +1,12 @@
 import * as ts from "typescript";
 import * as path from "path";
 
-export function compileByConfig(configFile: string, createTransformers?: (program: ts.Program) => ts.CustomTransformers | ts.CustomTransformers): number {
+export declare type CompilerOptions = {
+  transformers?: (program: ts.Program) => ts.CustomTransformers | ts.CustomTransformers,
+  processDiagnostics?: (program: ts.Program, diagnostics: ts.Diagnostic[]) => void;
+};
+
+export function compileByConfig(configFile: string, compilerOptions: CompilerOptions = {}): number {
   try {
     // Load and parse tsconfig json
     const tsConfigJson = readConfigFileSync(configFile);
@@ -14,13 +19,18 @@ export function compileByConfig(configFile: string, createTransformers?: (progra
     const program = ts.createProgram(tsConfig.fileNames, tsConfig.options, host);
 
     // Create custom transformers config
-    const transformers = (typeof createTransformers === "function") ? createTransformers(program) : createTransformers || {};
+    const transformers = (typeof compilerOptions.transformers === "function") ? compilerOptions.transformers(program) : compilerOptions.transformers || {};
 
     // Begin transformation
     const emitResult = program.emit(void 0, void 0, void 0, false, transformers);
 
     // Report diagnostics
     const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
+
+    // Process the diagnostics
+    if (typeof compilerOptions.processDiagnostics === "function") {
+      compilerOptions.processDiagnostics(program, allDiagnostics);
+    }
 
     allDiagnostics.forEach(diagnostic => {
       const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
@@ -53,7 +63,18 @@ export function compileByConfig(configFile: string, createTransformers?: (progra
     return exitCode;
   }
   catch (err) {
-    console.warn(err.stack);
+    if (err.stack !== undefined) {
+      console.warn(err.stack);
+    }
+    else if (err.message !== undefined) {
+      console.warn(err.message);
+    }
+    else if (err.messageText !== undefined) {
+      console.warn(err.messageText);
+    }
+    else {
+      console.warn(err);
+    }
     return 1;
   }
 }
