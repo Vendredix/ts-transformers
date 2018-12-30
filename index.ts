@@ -1,1 +1,28 @@
 export declare function enumValues<T>(): Array<T>;
+
+export declare function isNull(value: any): value is null;
+export declare function isUndefined(value: any): value is undefined;
+export declare function isNullOrUndefined(value: any): value is null | undefined;
+export declare function isNumber(value: any): value is number;
+export declare function isBoolean(value: any): value is boolean;
+export declare function isString(value: any): value is string;
+export declare function isFunction(value: any): value is Function;
+
+export declare function isPrimitive(value: any): value is number|boolean|string;
+
+export declare function isArray(value: any): value is Array<any>;
+
+/***
+ * Returns whether the given value is a not-null object that is also not an array.
+ *
+ * @param value
+ */
+export declare function isObject(value: any): value is object;
+
+/***
+ * Returns whether the given value is an array of at least a specific number of items.
+ *
+ * @param value
+ * @param {Number} [length = 1]
+ */
+export declare function isMinLengthArray(value: any, length?: number): value is Array<any>;

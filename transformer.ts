@@ -1,6 +1,19 @@
 import ts from "typescript";
 import path from "path";
 
+const typeofMethods = [
+  "isNull", "isUndefined", "isNullOrUndefined",
+  "isNumber", "isBoolean", "isString", "isFunction",
+  "isPrimitive",
+  "isArray", "isObject",
+  "isMinLengthArray",
+];
+const typeofTransformMap = {
+  "isPrimitive": "isNumberOrBooleanOrString",
+  "isObject": "isObjectAndNotNullAndNotArray",
+  "isMinLengthArray": true, // custom
+};
+
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
   return (context: ts.TransformationContext) => (file: ts.SourceFile) => visitNodeAndChildren(file, program, context);
 }
@@ -19,12 +32,134 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
     return;
   }
 
-  if (isApiExpression(node, typeChecker, "enumValues")) {
-    return transformEnumValuesExpression(node, typeChecker);
+  if (!ts.isCallExpression(node)) {
+    return node;
+  }
+
+  const apiMethod = getApiExpressionName(node, typeChecker);
+  if (apiMethod !== null) {
+    let newNode: ts.Node = node;
+    let addComment = true;
+
+    if (apiMethod === "enumValues") {
+      newNode = transformEnumValuesExpression(node, typeChecker);
+    }
+
+    if (typeofMethods.includes(apiMethod) && node.arguments.length > 0) {
+      newNode = ts.createParen(createApiTypeOfExpression(
+        program,
+        apiMethod,
+        node.arguments[0],
+        ...node.arguments.slice(1)
+      )!);
+
+      addComment = Boolean(typeofTransformMap[apiMethod]);
+    }
+
+    if (addComment) {
+      ts.addSyntheticTrailingComment(newNode, ts.SyntaxKind.MultiLineCommentTrivia, ` ${node.getText()} `, false);
+    }
+
+    return newNode;
   }
 
   return node;
 }
+
+export function createApiTypeOfExpression(program: ts.Program, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | null | never {
+  if (!methodName.startsWith("is")) {
+    throw new Error("Invalid method name: " + methodName);
+  }
+
+  const [arg0] = args;
+
+  if (methodName === "isMinLengthArray") {
+    let lengthArg: ts.Expression;
+
+    // Determine the length argument
+    if (args.length === 0 || typeof arg0 === "number") {
+      const length = args.length === 0 ? 1 : arg0;
+      lengthArg = ts.createLiteral(length);
+    }
+    else if (ts.isLiteralExpression(arg0) || ts.isIdentifier(arg0)
+      || ts.isCallExpression(arg0)
+      || ts.isElementAccessExpression(arg0) || ts.isPropertyAccessExpression(arg0)) {
+      lengthArg = arg0;
+    }
+    else {
+      throw new Error("Invalid length argument for isMinLengthArray!");
+    }
+
+    // Create `isArray(value) && value.length >= length` expression.
+    return ts.createBinary(
+      createTypeOfExpression(program,"Array", valueExpr),
+      ts.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
+      ts.createBinary(
+        ts.createPropertyAccess(valueExpr, "length"),
+        ts.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
+        lengthArg
+      )
+    );
+  }
+
+  // Transform the method name
+  if (typeofTransformMap[methodName]) {
+    methodName = typeofTransformMap[methodName];
+  }
+
+  const typeList: string[] = methodName.substring(2).split(/(?=[A-Z])/);
+  let joinType: string;
+
+  let expression: ts.Expression | null = null;
+  while (typeList.length) {
+    const negated = typeList[0] === "Not";
+    if (negated) typeList.shift();
+
+    const type = typeList.shift()!;
+    const expr = createTypeOfExpression(program, type, valueExpr, negated);
+
+    if (!expression) {
+      expression = expr!;
+    }
+    else {
+      const tokenType = joinType! === "Or" ? ts.SyntaxKind.BarBarToken : ts.SyntaxKind.AmpersandAmpersandToken;
+      expression = ts.createBinary(expression, ts.createToken(tokenType), expr!);
+    }
+
+    joinType = typeList.shift()!;
+  }
+
+  return expression;
+}
+
+function createTypeOfExpression(program: ts.Program, type: string, valueExpr: ts.Expression, negated: boolean = false): ts.Expression {
+  let expr: ts.Expression;
+
+  const equalityTokenType = negated ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken;
+
+  // Array.isArray(value)
+  if (type === "Array") {
+    expr = ts.createCall(
+      ts.createPropertyAccess(ts.createPropertyAccess(createGlobalIdentifier(program), ts.createIdentifier("Array")), "isArray"),
+      void 0,
+      [valueExpr],
+    );
+    if (negated) {
+      expr = ts.createLogicalNot(expr);
+    }
+  }
+  // value === null || value === undefined
+  else if (type === "Null" || type === "Undefined") {
+    expr = ts.createBinary(valueExpr, ts.createToken(equalityTokenType), type === "Null" ? ts.createNull() : ts.createVoidZero());
+  }
+  // Else: typeof value === "${type}"
+  else {
+    expr = ts.createBinary(ts.createTypeOf(valueExpr), ts.createToken(equalityTokenType), ts.createStringLiteral(type.toLowerCase()));
+  }
+
+  return expr;
+}
+
 
 function transformEnumValuesExpression(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   if (!node.typeArguments) {
@@ -61,23 +196,35 @@ function isApiImportExpression(node: ts.Node, typeChecker: ts.TypeChecker): node
     && isApiModulePath(declarations[0].getSourceFile().fileName);
 }
 
-function isApiExpression(node: ts.Node, typeChecker: ts.TypeChecker, apiMethod: string): node is ts.CallExpression {
+function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): string | null {
   if (!ts.isCallExpression(node)) {
-    return false;
+    return null;
   }
   const signature = typeChecker.getResolvedSignature(node);
   if (signature === undefined) {
-    return false;
+    return null;
   }
   const { declaration } = signature;
-  if (declaration && ts.isFunctionDeclaration(declaration)) {
-    return isApiModulePath(declaration.getSourceFile().fileName)
-      && !!declaration.name && declaration.name.getText() === apiMethod;
+  if (declaration && ts.isFunctionDeclaration(declaration)
+    && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
+    return declaration.name.getText();
   }
-  return false;
-
+  return null;
 }
 
 function isApiModulePath(filePath: string): boolean {
   return path.resolve(filePath).startsWith(path.join(__dirname, "index"));
+}
+
+function createGlobalIdentifier(program: ts.Program): ts.Identifier {
+  const lib = program.getCompilerOptions().lib || [];
+
+  if (lib.includes("lib.dom.d.ts")) {
+    return ts.createIdentifier("window");
+  }
+  else if (lib.includes("lib.webworker.d.ts")) {
+    return ts.createIdentifier("self");
+  }
+
+  return ts.createIdentifier("global");
 }

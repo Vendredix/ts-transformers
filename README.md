@@ -33,6 +33,42 @@ const permissions = enumValues<Permissions>(); // [1, 2, 3];
 const types = enumValues<Types>(); // ["text", "integer"];
 ```
 
+## How to use type guard functions
+
+```ts
+import {
+  isNull, isUndefined, isNullOrUndefined,
+  isBoolean, isNumber, isString, isFunction,
+  isPrimitive,
+  isArray, isObject, isMinLengthArray,
+} from "@vendredix/ts-transformers";
+
+let value: any;
+
+if (isNullOrUndefined(value)) {
+  // (value === null || value === undefined)
+  // value is null | undefined
+}
+
+if (isFunction(value)) {
+  // (typeof value === "function")
+  // value is a function
+}
+
+if (isPrimitive(value)) {
+  // (typeof value === "number" || typeof value === "boolean" || typeof value === "string")
+  // value is number | boolean | string;
+}
+
+if (isObject(value)) {
+  // (typeof value === "object" && value !== null && !Array.isArray(value))
+  // value is an object and not null
+}
+if (isMinLengthArray(value, 2)) {
+  // value is an array and value.length >= 2
+}
+```
+
 ## How to use a transformer
 See [compiler.js](tests/compiler.js) for an example.
 
