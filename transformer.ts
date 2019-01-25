@@ -19,55 +19,81 @@ const typeofTransformMap = {
 };
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
-  return (context: ts.TransformationContext) => (file: ts.SourceFile) => visitNodeAndChildren(file, program, context);
-}
+  return (context: ts.TransformationContext) => {
+    const typeChecker = program.getTypeChecker();
 
-function visitNodeAndChildren(node: ts.SourceFile, program: ts.Program, context: ts.TransformationContext): ts.SourceFile;
-function visitNodeAndChildren(node: ts.Node, program: ts.Program, context: ts.TransformationContext): ts.Node;
-function visitNodeAndChildren(node: ts.Node, program: ts.Program, context: ts.TransformationContext): ts.Node | undefined {
-  return ts.visitEachChild(visitNode(node, program), childNode => visitNodeAndChildren(childNode, program, context), context);
-}
+    context.enableSubstitution(ts.SyntaxKind.CallExpression);
+    const prevOnSubstituteNode = context.onSubstituteNode;
+    context.onSubstituteNode = onSubstituteNode;
 
-function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
-  const typeChecker = program.getTypeChecker();
-  const type = ts.SyntaxKind[node.kind];
+    return visitNodeAndChildren;
 
-  if (isApiImportExpression(node, typeChecker)) {
-    return;
-  }
-
-  if (!ts.isCallExpression(node)) {
-    return node;
-  }
-
-  const apiMethod = getApiExpressionName(node, typeChecker);
-  if (apiMethod !== null) {
-    let newNode: ts.Node = node;
-    let addComment = true;
-
-    if (apiMethod === "enumValues") {
-      newNode = transformEnumValuesExpression(node, typeChecker);
+    function visitNodeAndChildren(node: ts.SourceFile): ts.SourceFile;
+    function visitNodeAndChildren(node: ts.Node): ts.Node;
+    function visitNodeAndChildren(node: ts.Node): ts.Node | undefined {
+      return ts.visitEachChild(visitNode(node), childNode => visitNodeAndChildren(childNode), context);
     }
 
-    if (typeofMethods.includes(apiMethod) && node.arguments.length > 0) {
-      newNode = ts.createParen(createApiTypeOfExpression(
-        program,
-        apiMethod,
-        node.arguments[0],
-        ...node.arguments.slice(1)
-      )!);
 
-      addComment = Boolean(typeofTransformMap[apiMethod]);
+    function visitNode(node: ts.Node): ts.Node | undefined {
+      if (isApiImportExpression(node, typeChecker)) {
+        return;
+      }
+
+      if (!ts.isCallExpression(node)) {
+        return node;
+      }
+
+      const apiMethod = getApiExpressionName(node, typeChecker);
+      if (apiMethod !== null) {
+        let newNode: ts.Node = node;
+        let addComment = true;
+
+        if (apiMethod === "enumValues") {
+          newNode = transformEnumValuesExpression(node, typeChecker);
+        }
+
+        if (!context.getCompilerOptions().removeComments && addComment) {
+          ts.addSyntheticTrailingComment(newNode, ts.SyntaxKind.MultiLineCommentTrivia, ` ${node.getText()} `, false);
+        }
+
+        return newNode;
+      }
+
+      return node;
     }
 
-    if (addComment) {
-      ts.addSyntheticTrailingComment(newNode, ts.SyntaxKind.MultiLineCommentTrivia, ` ${node.getText()} `, false);
-    }
+    function onSubstituteNode(hint: ts.EmitHint, node: ts.Node): ts.Node {
+      if (!ts.isCallExpression(node)) {
+        return prevOnSubstituteNode(hint, node);
+      }
 
-    return newNode;
+      const apiMethod = getApiExpressionName(node, typeChecker);
+      if (apiMethod !== null) {
+        let newNode: ts.Node = node;
+        let addComment = true;
+
+        if (typeofMethods.includes(apiMethod) && node.arguments.length > 0) {
+          newNode = ts.createParen(createApiTypeOfExpression(
+            program,
+            apiMethod,
+            node.arguments[0],
+            ...node.arguments.slice(1)
+          )!);
+
+          addComment = Boolean(typeofTransformMap[apiMethod]);
+        }
+
+        // if (!context.getCompilerOptions().removeComments && addComment) {
+        //   ts.addSyntheticTrailingComment(newNode, ts.SyntaxKind.MultiLineCommentTrivia, ` ${node.getText()} `, false);
+        // }
+
+        return newNode;
+      }
+
+      return prevOnSubstituteNode(hint, node);
+    }
   }
-
-  return node;
 }
 
 export function createApiTypeOfExpression(program: ts.Program, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | null | never {
