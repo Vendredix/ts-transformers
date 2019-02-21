@@ -45,7 +45,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
       }
 
       const apiMethod = getApiExpressionName(node, typeChecker);
-      if (apiMethod !== null) {
+      if (apiMethod !== undefined) {
         let newNode: ts.Node = node;
         let addComment = true;
 
@@ -64,22 +64,40 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
     }
 
     function onSubstituteNode(hint: ts.EmitHint, node: ts.Node): ts.Node {
-      if (!ts.isCallExpression(node)) {
+      if (!ts.isCallExpression(node) && !ts.isIdentifier(node)) {
         return prevOnSubstituteNode(hint, node);
       }
 
       const apiMethod = getApiExpressionName(node, typeChecker);
-      if (apiMethod !== null) {
+      if (apiMethod !== undefined) {
         let newNode: ts.Node = node;
         let addComment = true;
 
-        if (typeofMethods.includes(apiMethod) && node.arguments.length > 0) {
-          newNode = ts.createParen(createApiTypeOfExpression(
-            program,
-            apiMethod,
-            node.arguments[0],
-            ...node.arguments.slice(1)
-          )!);
+        if (typeofMethods.includes(apiMethod)) {
+          if (ts.isCallExpression(node) && node.arguments.length > 0) {
+            newNode = ts.createParen(createApiTypeOfExpression(
+              program,
+              apiMethod,
+              node.arguments[0],
+              ...node.arguments.slice(1)
+            )!);
+          }
+          else if (ts.isIdentifier(node)) {
+            const tempIdentifier = ts.createTempVariable(undefined);
+            newNode = ts.createArrowFunction(
+              void 0,
+              void 0,
+              [ts.createParameter(void 0, void 0, void 0, tempIdentifier, void 0, void 0, void 0)],
+              void 0,
+              ts.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+              createApiTypeOfExpression(
+                program,
+                apiMethod,
+                tempIdentifier,
+                [],
+              ) as ts.ConciseBody,
+            )
+          }
 
           addComment = Boolean(typeofTransformMap[apiMethod]);
         }
@@ -96,7 +114,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
   }
 }
 
-export function createApiTypeOfExpression(program: ts.Program, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | null | never {
+export function createApiTypeOfExpression(program: ts.Program, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
   if (!methodName.startsWith("is")) {
     throw new Error("Invalid method name: " + methodName);
   }
@@ -142,7 +160,7 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
   const typeList: string[] = methodName.substring(2).split(/(?=[A-Z])/);
   let joinType: string;
 
-  let expression: ts.Expression | null = null;
+  let expression: ts.Expression | undefined;
   while (typeList.length) {
     const negated = typeList[0] === "Not";
     if (negated) typeList.shift();
@@ -228,20 +246,25 @@ function isApiImportExpression(node: ts.Node, typeChecker: ts.TypeChecker): node
     && isApiModulePath(declarations[0].getSourceFile().fileName);
 }
 
-function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): string | null {
-  if (!ts.isCallExpression(node)) {
-    return null;
+function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): string | undefined {
+  let declaration: ts.Declaration | undefined;
+
+  if (ts.isIdentifier(node)) {
+    const type = typeChecker.getTypeAtLocation(node);
+    declaration = type && type.symbol && type.symbol.declarations && type.symbol.declarations[0];
   }
-  const signature = typeChecker.getResolvedSignature(node);
-  if (signature === undefined) {
-    return null;
+  else if (ts.isCallExpression(node)) {
+    const signature = typeChecker.getResolvedSignature(node);
+    if (signature === undefined) {
+      return;
+    }
+    declaration = signature.declaration;
   }
-  const { declaration } = signature;
   if (declaration && ts.isFunctionDeclaration(declaration)
     && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
     return declaration.name.getText();
   }
-  return null;
+  return;
 }
 
 function isApiModulePath(filePath: string): boolean {

@@ -53,6 +53,7 @@ if (isPrimitive(value)) {
 
 if (isArray(value)) {
   console.log(value.join(", ")); // value is Array<any>
+  const stringValues = value.filter<string>(isString);
 }
 if (isObject(value)) {
   console.log(value.hasOwnProperty("prop")); // value is an object and not null
