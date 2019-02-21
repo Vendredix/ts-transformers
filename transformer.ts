@@ -3,7 +3,7 @@ import path from "path";
 
 const typeofMethods = [
   "isNull", "isUndefined", "isNullOrUndefined",
-  "isNumber", "isBoolean", "isString", "isFunction",
+  "isNumber", "isBoolean", "isString", "isFunction", "isSymbol",
   "isPrimitive",
   "isArray", "isObject", "isObjectOrArray",
   "isMinLengthArray",

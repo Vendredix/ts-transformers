@@ -7,6 +7,7 @@ export declare function isNumber(value: any): value is number;
 export declare function isBoolean(value: any): value is boolean;
 export declare function isString(value: any): value is string;
 export declare function isFunction(value: any): value is Function;
+export declare function isSymbol(value: any): value is symbol;
 
 export declare function isPrimitive(value: any): value is number|boolean|string;
 

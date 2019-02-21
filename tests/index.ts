@@ -1,7 +1,7 @@
 import {
   enumValues,
   isNull, isUndefined, isNullOrUndefined,
-  isBoolean, isNumber, isString, isFunction,
+  isBoolean, isNumber, isString, isFunction, isSymbol,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isMinLengthArray,
@@ -22,6 +22,7 @@ declare const enum Types {
 const permissions = enumValues<Permissions>();
 const types = enumValues<Types>();
 
+const sym = Symbol("test");
 let value: any;
 
 if (isNull(value)) {
@@ -70,4 +71,8 @@ if (isObjectOrArray(value)) {
 
 if (isNonEmptyString(value)) {
   console.log(value);
+}
+
+if (isSymbol(value)) {
+  console.log(value.description);
 }
