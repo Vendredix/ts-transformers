@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as ts from "typescript";
 import * as path from "path";
 
@@ -97,4 +98,12 @@ function parseJsonConfigFileContent(tsConfigJson: any, configFile: string): ts.P
   }
 
   return tsParse;
+}
+
+if (process.mainModule === module) {
+  const configPath = process.argv[2];
+  if (!configPath) {
+    throw new Error("Invalid tsconfig.json path");
+  }
+  compileByConfig(configPath);
 }
