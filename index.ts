@@ -18,7 +18,7 @@ export declare function isArray(value: any): value is Array<any>;
  *
  * @param value
  */
-export declare function isObject(value: any): value is object;
+export declare function isObject<T extends object = object>(value: any): value is T;
 
 export declare function isObjectOrArray(value: any): value is object | Array<any>;
 
