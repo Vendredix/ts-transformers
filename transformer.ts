@@ -1,14 +1,21 @@
 import ts from "typescript";
 import path from "path";
 
-const typeofMethods = [
-  "isNull", "isUndefined", "isNullOrUndefined",
-  "isNumber", "isBoolean", "isString", "isFunction", "isSymbol",
-  "isPrimitive",
-  "isArray", "isObject", "isObjectOrArray",
-  "isMinLengthArray",
-  "isNonEmptyString", "isMinLengthString",
-];
+enum ApiMethod {
+  isNull, isUndefined, isNullOrUndefined,
+  isNumber, isBoolean, isString, isFunction, isSymbol,
+  isPrimitive,
+  isArray, isObject, isObjectOrArray,
+  isMinLengthArray,
+  isNonEmptyString, isMinLengthString,
+  $LAST_TYPEOF_METHOD = isMinLengthString,
+
+  isBitSet, setBits, unsetBits,
+  $LAST_BIT_METHOD = unsetBits,
+
+  enumValues,
+}
+
 const typeofTransformMap = {
   "isPrimitive": "isNumberOrBooleanOrString",
   "isObject": "isObjectAndNotNullAndNotArray",
@@ -16,6 +23,13 @@ const typeofTransformMap = {
   "isMinLengthArray": true, // custom
   "isNonEmptyString": true,
   "isMinLengthString": true,
+};
+const apiArgCountMap = {
+  [ApiMethod.isMinLengthArray]: [1, 2],
+  [ApiMethod.isMinLengthString]: [1, 2],
+  [ApiMethod.isBitSet]: 2,
+  [ApiMethod.setBits]: 2,
+  [ApiMethod.unsetBits]: 2,
 };
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
@@ -49,7 +63,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
         let newNode: ts.Node = node;
         let addComment = true;
 
-        if (apiMethod === "enumValues") {
+        if (apiMethod === ApiMethod.enumValues) {
           newNode = transformEnumValuesExpression(node, typeChecker);
         }
 
@@ -70,36 +84,71 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 
       const apiMethod = getApiExpressionName(node, typeChecker);
       if (apiMethod !== undefined) {
-        let newNode: ts.Node = node;
+        const methodName = ApiMethod[apiMethod];
+        let newNode: ts.Expression = node;
         let addComment = true;
 
-        if (typeofMethods.includes(apiMethod)) {
-          if (ts.isCallExpression(node) && node.arguments.length > 0) {
-            newNode = ts.createParen(createApiTypeOfExpression(
-              program,
-              apiMethod,
-              node.arguments[0],
-              ...node.arguments.slice(1)
-            )!);
-          }
-          else if (ts.isIdentifier(node)) {
-            const tempIdentifier = ts.createTempVariable(undefined);
-            newNode = ts.createArrowFunction(
-              void 0,
-              void 0,
-              [ts.createParameter(void 0, void 0, void 0, tempIdentifier, void 0, void 0, void 0)],
-              void 0,
-              ts.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-              createApiTypeOfExpression(
-                program,
-                apiMethod,
-                tempIdentifier,
-                [],
-              ) as ts.ConciseBody,
-            )
-          }
+        const {argCount, minArgCount} = getArgumentCount(apiMethod);
 
-          addComment = Boolean(typeofTransformMap[apiMethod]);
+        let useCallback = false;
+        let identifierList: ReadonlyArray<ts.Expression>
+          , paramList: ts.ParameterDeclaration[];
+
+        if (ts.isCallExpression(node)) {
+          if (node.arguments.length < minArgCount) {
+            throw new Error("Not enough parameters"); // fixme: spawn TS error.
+          }
+          identifierList = node.arguments;
+        }
+        else {
+          // Prepare new identifiers and arrow callback arguments such that the method can be used as an identifier.
+          useCallback = true;
+          const list = new Array(argCount);
+          paramList = new Array(argCount);
+
+          for (let i = 0; i < argCount; i++) {
+            list[i] = ts.createTempVariable(undefined);
+            paramList[i] = ts.createParameter(void 0, void 0, void 0, list[i], void 0, void 0, void 0);
+          }
+          identifierList = list;
+        }
+
+        if (isTypeofMethod(apiMethod)) {
+          newNode = createApiTypeOfExpression(
+            program,
+            methodName,
+            identifierList[0],
+            ...identifierList.slice(1),
+          )!;
+          addComment = Boolean(typeofTransformMap[methodName]);
+        }
+        else if (isBitMethod(apiMethod)) {
+          switch (apiMethod) {
+            case ApiMethod.isBitSet:
+              newNode = createIsBitSet(identifierList[0], identifierList[1]);
+              break;
+            case ApiMethod.setBits:
+            case ApiMethod.unsetBits:
+              newNode = createSetBits(identifierList[0], identifierList[1], apiMethod === ApiMethod.unsetBits);
+              break;
+          }
+        }
+        else {
+          return newNode;
+        }
+
+        if (!useCallback && !ts.isParenthesizedExpression(newNode)) {
+          newNode = ts.createParen(newNode);
+        }
+        else if (useCallback) {
+          newNode = ts.createArrowFunction(
+            void 0,
+            void 0,
+            paramList!,
+            void 0,
+            ts.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+            newNode as ts.ConciseBody,
+          )
         }
 
         // if (!context.getCompilerOptions().removeComments && addComment) {
@@ -210,6 +259,36 @@ function createTypeOfExpression(program: ts.Program, type: string, valueExpr: ts
   return expr;
 }
 
+function createIsBitSet(left: ts.Expression, right: ts.Expression, invert?: boolean): ts.Expression {
+  // ((left & right) === right)
+  return ts.createParen(ts.createBinary(
+    ts.createParen(ts.createBinary(
+      left,
+      ts.createToken(ts.SyntaxKind.AmpersandToken),
+      right,
+    )),
+    ts.createToken(invert ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken),
+    right,
+  ));
+}
+
+function createSetBits(left: ts.Expression, right: ts.Expression, unset: boolean): ts.Expression {
+  // (left & ~right)
+  if (unset) {
+    return ts.createParen(ts.createBinary(
+      left,
+      ts.createToken(ts.SyntaxKind.AmpersandToken),
+      ts.createPrefix(ts.SyntaxKind.TildeToken, right),
+    ));
+  }
+
+  // (left | right)
+  return ts.createParen(ts.createBinary(
+    left,
+    ts.createToken(ts.SyntaxKind.BarToken),
+    right,
+  ));
+}
 
 function transformEnumValuesExpression(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   if (!node.typeArguments) {
@@ -246,7 +325,7 @@ function isApiImportExpression(node: ts.Node, typeChecker: ts.TypeChecker): node
     && isApiModulePath(declarations[0].getSourceFile().fileName);
 }
 
-function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): string | undefined {
+function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMethod | undefined {
   let declaration: ts.Declaration | undefined;
 
   if (ts.isIdentifier(node)) {
@@ -262,9 +341,37 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): strin
   }
   if (declaration && ts.isFunctionDeclaration(declaration)
     && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
-    return declaration.name.getText();
+    const text = declaration.name.getText();
+    if (text.charAt(0) !== "$" && typeof ApiMethod[text] === "number") {
+      return ApiMethod[text];
+    }
   }
   return;
+}
+
+function getArgumentCount(method: ApiMethod) {
+  const countDef = apiArgCountMap[method];
+  let minArgCount
+    , argCount;
+
+  if (typeof countDef === "number" && countDef >= 0) {
+    minArgCount = argCount = countDef;
+  }
+  else if (Array.isArray(countDef)) {
+    [minArgCount, argCount] = countDef;
+  }
+
+  return {
+    minArgCount: minArgCount !== undefined ? minArgCount : 1,
+    argCount: argCount !== undefined ? argCount : 1,
+  };
+}
+
+function isTypeofMethod(method: ApiMethod): boolean {
+  return method <= ApiMethod.$LAST_TYPEOF_METHOD;
+}
+function isBitMethod(method: ApiMethod): boolean {
+  return method > ApiMethod.$LAST_TYPEOF_METHOD && method <= ApiMethod.$LAST_BIT_METHOD;
 }
 
 function isApiModulePath(filePath: string): boolean {

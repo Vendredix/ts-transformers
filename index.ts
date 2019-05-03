@@ -44,3 +44,8 @@ export declare function isNonEmptyString(value: any): value is string;
  * @param {Number} [length = 1]
  */
 export declare function isMinLengthString(value: any, length?: number): value is string;
+
+
+export declare function isBitSet<T extends number>(value: T, bitmask: T): boolean;
+export declare function setBits<T extends number>(value: T, bitmask: T): T;
+export declare function unsetBits<T extends number>(value: T, bitmask: T): T;

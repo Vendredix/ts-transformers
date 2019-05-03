@@ -6,6 +6,7 @@ import {
   isArray, isObject, isObjectOrArray,
   isMinLengthArray,
   isNonEmptyString, isMinLengthString,
+  isBitSet, setBits, unsetBits,
 } from "../index";
 
 declare const enum Permissions {
@@ -77,3 +78,27 @@ if (isNonEmptyString(value)) {
 if (isSymbol(value)) {
   console.log(value.description);
 }
+
+(function () {
+  let value: Permissions = Permissions.READ;
+  console.log("Read: " + isBitSet(value, Permissions.READ));
+  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+
+  console.log("\nsetting WRITE");
+  value = setBits(value, Permissions.WRITE);
+  console.log("Read: " + isBitSet(value, Permissions.READ));
+  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+
+  console.log("\nunsetting READ");
+  value = unsetBits(value, Permissions.READ);
+  console.log("Read: " + isBitSet(value, Permissions.READ));
+  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+
+  value = updateRead(setBits);
+  value = updateRead(unsetBits);
+  const foo = updateRead(isBitSet);
+
+  function updateRead(method) {
+    return method(value, Permissions.READ);
+  }
+})();
