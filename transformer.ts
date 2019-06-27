@@ -32,8 +32,10 @@ const apiArgCountMap = {
   [ApiMethod.unsetBits]: 2,
 };
 
-export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
+export default function transformer(programOrGetter: ts.Program | (() => ts.Program)): ts.TransformerFactory<ts.SourceFile> {
   return (context: ts.TransformationContext) => {
+    const program = typeof programOrGetter === "function" ? programOrGetter() : programOrGetter;
+
     const typeChecker = program.getTypeChecker();
 
     context.enableSubstitution(ts.SyntaxKind.CallExpression);
