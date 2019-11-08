@@ -22,6 +22,8 @@ export declare function isObject<T extends object = object>(value: any): value i
 
 export declare function isObjectOrArray(value: any): value is object | Array<any>;
 
+export declare function isIterable(value: any): value is Iterable<any>;
+
 /***
  * Returns whether the given value is an array of at least a specific number of items.
  *

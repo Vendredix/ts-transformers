@@ -6,6 +6,7 @@ enum ApiMethod {
   isNumber, isBoolean, isString, isFunction, isSymbol,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
+  isIterable,
   isMinLengthArray,
   isNonEmptyString, isMinLengthString,
   $LAST_TYPEOF_METHOD = isMinLengthString,
@@ -20,6 +21,7 @@ const typeofTransformMap = {
   "isPrimitive": "isNumberOrBooleanOrString",
   "isObject": "isObjectAndNotNullAndNotArray",
   "isObjectOrArray": "isObjectAndNotNull",
+  "isIterable": true,
   "isMinLengthArray": true, // custom
   "isNonEmptyString": true,
   "isMinLengthString": true,
@@ -171,6 +173,21 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
   }
 
   const [arg0] = args;
+
+  if (methodName === "isIterable") {
+    return ts.createBinary(
+      valueExpr,
+      ts.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
+      createApiTypeOfExpression(
+        program,
+        "isFunction",
+        ts.createElementAccess(
+          valueExpr,
+          ts.createPropertyAccess(ts.createPropertyAccess(createGlobalIdentifier(program), ts.createIdentifier("Symbol")), "iterator"),
+        ),
+      )!,
+    );
+  }
 
   if (["isMinLengthArray", "isNonEmptyString", "isMinLengthString"].includes(methodName)) {
     let lengthArg: ts.Expression;

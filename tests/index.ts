@@ -4,6 +4,7 @@ import {
   isBoolean, isNumber, isString, isFunction, isSymbol,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
+  isIterable,
   isMinLengthArray,
   isNonEmptyString, isMinLengthString,
   isBitSet, setBits, unsetBits,
@@ -68,6 +69,10 @@ if (isMinLengthArray(value, 2) || isObject(value)) {
 }
 
 if (isObjectOrArray(value)) {
+  console.log(value);
+}
+
+if (isIterable(value)) {
   console.log(value);
 }
 
