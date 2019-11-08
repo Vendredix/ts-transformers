@@ -381,6 +381,12 @@ function isApiModulePath(filePath: string): boolean {
 }
 
 function createGlobalIdentifier(program: ts.Program): ts.Identifier {
+  const target = program.getCompilerOptions().target;
+
+  if (target && target >= ts.ScriptTarget.ES2019) {
+    return ts.createIdentifier("globalThis");
+  }
+
   const lib = program.getCompilerOptions().lib || [];
 
   if (lib.includes("lib.dom.d.ts")) {
