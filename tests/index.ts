@@ -1,7 +1,7 @@
 import {
   enumValues,
   isNull, isUndefined, isNullOrUndefined,
-  isBoolean, isNumber, isString, isFunction, isSymbol,
+  isBoolean, isNumber, isBigint, isString, isFunction, isSymbol,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isIterable,
@@ -38,6 +38,9 @@ if (isNullOrUndefined(value)) {
 }
 if (isNumber(value)) {
   console.log(value + 123); // value is a number
+}
+if (isBigint(value)) {
+  console.log(value + 123n); // value is a bigint
 }
 if (isBoolean(value)) {
   console.log(value === false); // value is a boolean

@@ -4,7 +4,7 @@ import {createGlobalIdentifier, createLiteral} from "./utils";
 
 enum ApiMethod {
   isNull, isUndefined, isNullOrUndefined,
-  isNumber, isBoolean, isString, isFunction, isSymbol,
+  isNumber, isBoolean, isBigint, isString, isFunction, isSymbol,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isIterable,
