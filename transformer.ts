@@ -1,5 +1,6 @@
 import ts from "typescript";
 import path from "path";
+import {createGlobalIdentifier, createLiteral} from "./utils";
 
 enum ApiMethod {
   isNull, isUndefined, isNullOrUndefined,
@@ -44,6 +45,8 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
     const prevOnSubstituteNode = context.onSubstituteNode;
     context.onSubstituteNode = onSubstituteNode;
 
+    const { factory } = context;
+
     return visitNodeAndChildren;
 
     function visitNodeAndChildren(node: ts.SourceFile): ts.SourceFile;
@@ -68,7 +71,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         let addComment = true;
 
         if (apiMethod === ApiMethod.enumValues) {
-          newNode = transformEnumValuesExpression(node, typeChecker);
+          newNode = transformEnumValuesExpression(factory, node, typeChecker);
         }
 
         if (!context.getCompilerOptions().removeComments && addComment) {
@@ -111,8 +114,8 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
           paramList = new Array(argCount);
 
           for (let i = 0; i < argCount; i++) {
-            list[i] = ts.createTempVariable(undefined);
-            paramList[i] = ts.createParameter(void 0, void 0, void 0, list[i], void 0, void 0, void 0);
+            list[i] = factory.createTempVariable(undefined);
+            paramList[i] = factory.createParameterDeclaration(void 0, void 0, void 0, list[i], void 0, void 0, void 0);
           }
           identifierList = list;
         }
@@ -120,6 +123,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         if (isTypeofMethod(apiMethod)) {
           newNode = createApiTypeOfExpression(
             program,
+            factory,
             methodName,
             identifierList[0],
             ...identifierList.slice(1),
@@ -129,11 +133,11 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         else if (isBitMethod(apiMethod)) {
           switch (apiMethod) {
             case ApiMethod.isBitSet:
-              newNode = createIsBitSet(identifierList[0], identifierList[1]);
+              newNode = createIsBitSet(factory, identifierList[0], identifierList[1]);
               break;
             case ApiMethod.setBits:
             case ApiMethod.unsetBits:
-              newNode = createSetBits(identifierList[0], identifierList[1], apiMethod === ApiMethod.unsetBits);
+              newNode = createSetBits(factory, identifierList[0], identifierList[1], apiMethod === ApiMethod.unsetBits);
               break;
           }
         }
@@ -142,15 +146,15 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         }
 
         if (!useCallback && !ts.isParenthesizedExpression(newNode)) {
-          newNode = ts.createParen(newNode);
+          newNode = factory.createParenthesizedExpression(newNode);
         }
         else if (useCallback) {
-          newNode = ts.createArrowFunction(
+          newNode = factory.createArrowFunction(
             void 0,
             void 0,
             paramList!,
             void 0,
-            ts.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+            factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
             newNode as ts.ConciseBody,
           )
         }
@@ -167,7 +171,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
   }
 }
 
-export function createApiTypeOfExpression(program: ts.Program, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
+export function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
   if (!methodName.startsWith("is")) {
     throw new Error("Invalid method name: " + methodName);
   }
@@ -175,15 +179,16 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
   const [arg0] = args;
 
   if (methodName === "isIterable") {
-    return ts.createBinary(
+    return factory.createBinaryExpression(
       valueExpr,
-      ts.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
+      factory.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
       createApiTypeOfExpression(
         program,
+        factory,
         "isFunction",
-        ts.createElementAccess(
+        factory.createElementAccessExpression(
           valueExpr,
-          ts.createPropertyAccess(ts.createPropertyAccess(createGlobalIdentifier(program), ts.createIdentifier("Symbol")), "iterator"),
+          factory.createPropertyAccessExpression(factory.createPropertyAccessExpression(createGlobalIdentifier(program, factory), factory.createIdentifier("Symbol")), "iterator"),
         ),
       )!,
     );
@@ -195,7 +200,7 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
     // Determine the length argument
     if (args.length === 0 || typeof arg0 === "number") {
       const length = args.length === 0 ? 1 : arg0;
-      lengthArg = ts.createLiteral(length);
+      lengthArg = factory.createNumericLiteral(length);
     }
     else if (ts.isLiteralExpression(arg0) || ts.isIdentifier(arg0)
       || ts.isCallExpression(arg0)
@@ -209,12 +214,12 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
     const type = methodName.split(/(?=[A-Z])/).pop()!;
 
     // Create `isArray(value) && value.length >= length` expression.
-    return ts.createBinary(
-      createTypeOfExpression(program, type, valueExpr),
-      ts.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
-      ts.createBinary(
-        ts.createPropertyAccess(valueExpr, "length"),
-        ts.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
+    return factory.createBinaryExpression(
+      createTypeOfExpression(program, factory, type, valueExpr),
+      factory.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
+      factory.createBinaryExpression(
+        factory.createPropertyAccessExpression(valueExpr, "length"),
+        factory.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
         lengthArg
       )
     );
@@ -234,14 +239,14 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
     if (negated) typeList.shift();
 
     const type = typeList.shift()!;
-    const expr = createTypeOfExpression(program, type, valueExpr, negated);
+    const expr = createTypeOfExpression(program, factory, type, valueExpr, negated);
 
     if (!expression) {
       expression = expr!;
     }
     else {
       const tokenType = joinType! === "Or" ? ts.SyntaxKind.BarBarToken : ts.SyntaxKind.AmpersandAmpersandToken;
-      expression = ts.createBinary(expression, ts.createToken(tokenType), expr!);
+      expression = factory.createBinaryExpression(expression, factory.createToken(tokenType), expr!);
     }
 
     joinType = typeList.shift()!;
@@ -250,68 +255,68 @@ export function createApiTypeOfExpression(program: ts.Program, methodName: strin
   return expression;
 }
 
-function createTypeOfExpression(program: ts.Program, type: string, valueExpr: ts.Expression, negated: boolean = false): ts.Expression {
+function createTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, type: string, valueExpr: ts.Expression, negated: boolean = false): ts.Expression {
   let expr: ts.Expression;
 
   const equalityTokenType = negated ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken;
 
   // Array.isArray(value)
   if (type === "Array") {
-    expr = ts.createCall(
-      ts.createPropertyAccess(ts.createPropertyAccess(createGlobalIdentifier(program), ts.createIdentifier("Array")), "isArray"),
+    expr = factory.createCallExpression(
+      factory.createPropertyAccessExpression(factory.createPropertyAccessExpression(createGlobalIdentifier(program, factory), factory.createIdentifier("Array")), "isArray"),
       void 0,
       [valueExpr],
     );
     if (negated) {
-      expr = ts.createLogicalNot(expr);
+      expr = factory.createLogicalNot(expr);
     }
   }
   // value === null || value === undefined
   else if (type === "Null" || type === "Undefined") {
-    expr = ts.createBinary(valueExpr, ts.createToken(equalityTokenType), type === "Null" ? ts.createNull() : ts.createVoidZero());
+    expr = factory.createBinaryExpression(valueExpr, factory.createToken(equalityTokenType), type === "Null" ? factory.createNull() : factory.createVoidZero());
   }
   // Else: typeof value === "${type}"
   else {
-    expr = ts.createBinary(ts.createTypeOf(valueExpr), ts.createToken(equalityTokenType), ts.createStringLiteral(type.toLowerCase()));
+    expr = factory.createBinaryExpression(factory.createTypeOfExpression(valueExpr), factory.createToken(equalityTokenType), factory.createStringLiteral(type.toLowerCase()));
   }
 
   return expr;
 }
 
-function createIsBitSet(left: ts.Expression, right: ts.Expression, invert?: boolean): ts.Expression {
+function createIsBitSet(factory: ts.NodeFactory, left: ts.Expression, right: ts.Expression, invert?: boolean): ts.Expression {
   // ((left & right) === right)
-  return ts.createParen(ts.createBinary(
-    ts.createParen(ts.createBinary(
+  return factory.createParenthesizedExpression(factory.createBinaryExpression(
+    factory.createParenthesizedExpression(factory.createBinaryExpression(
       left,
-      ts.createToken(ts.SyntaxKind.AmpersandToken),
+      factory.createToken(ts.SyntaxKind.AmpersandToken),
       right,
     )),
-    ts.createToken(invert ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken),
+    factory.createToken(invert ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken),
     right,
   ));
 }
 
-function createSetBits(left: ts.Expression, right: ts.Expression, unset: boolean): ts.Expression {
+function createSetBits(factory: ts.NodeFactory, left: ts.Expression, right: ts.Expression, unset: boolean): ts.Expression {
   // (left & ~right)
   if (unset) {
-    return ts.createParen(ts.createBinary(
+    return factory.createParenthesizedExpression(factory.createBinaryExpression(
       left,
-      ts.createToken(ts.SyntaxKind.AmpersandToken),
-      ts.createPrefix(ts.SyntaxKind.TildeToken, right),
+      factory.createToken(ts.SyntaxKind.AmpersandToken),
+      factory.createPrefixUnaryExpression(ts.SyntaxKind.TildeToken, right),
     ));
   }
 
   // (left | right)
-  return ts.createParen(ts.createBinary(
+  return factory.createParenthesizedExpression(factory.createBinaryExpression(
     left,
-    ts.createToken(ts.SyntaxKind.BarToken),
+    factory.createToken(ts.SyntaxKind.BarToken),
     right,
   ));
 }
 
-function transformEnumValuesExpression(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
+function transformEnumValuesExpression(factory: ts.NodeFactory, node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
   if (!node.typeArguments) {
-    return ts.createArrayLiteral([]);
+    return factory.createArrayLiteralExpression([]);
   }
   const valueList = [];
 
@@ -323,12 +328,12 @@ function transformEnumValuesExpression(node: ts.CallExpression, typeChecker: ts.
     for (const member of enumDeclaration.members) {
       const value = typeChecker.getConstantValue(member);
       if (value !== undefined) {
-        valueList.push(ts.createLiteral(value));
+        valueList.push(createLiteral(factory, value));
       }
     }
   }
 
-  return ts.createArrayLiteral(valueList);
+  return factory.createArrayLiteralExpression(valueList);
 }
 
 function isApiImportExpression(node: ts.Node, typeChecker: ts.TypeChecker): node is ts.ImportDeclaration {
@@ -395,23 +400,4 @@ function isBitMethod(method: ApiMethod): boolean {
 
 function isApiModulePath(filePath: string): boolean {
   return path.resolve(filePath).startsWith(path.join(__dirname, "index"));
-}
-
-function createGlobalIdentifier(program: ts.Program): ts.Identifier {
-  const target = program.getCompilerOptions().target;
-
-  if (target && target >= ts.ScriptTarget.ES2019) {
-    return ts.createIdentifier("globalThis");
-  }
-
-  const lib = program.getCompilerOptions().lib || [];
-
-  if (lib.includes("lib.dom.d.ts")) {
-    return ts.createIdentifier("window");
-  }
-  else if (lib.includes("lib.webworker.d.ts")) {
-    return ts.createIdentifier("self");
-  }
-
-  return ts.createIdentifier("global");
 }

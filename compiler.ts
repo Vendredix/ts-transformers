@@ -100,7 +100,7 @@ function parseJsonConfigFileContent(tsConfigJson: any, configFile: string): ts.P
   return tsParse;
 }
 
-if (process.mainModule === module) {
+if ((<any>process).mainModule === module) {
   const configPath = process.argv[2];
   if (!configPath) {
     throw new Error("Invalid tsconfig.json path");

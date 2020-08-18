@@ -19,6 +19,7 @@
   },
   "files": [
     "index.ts",
+    "utils.ts",
     "transformer.ts",
     "compiler.ts"
   ],
