@@ -1,6 +1,6 @@
 {
   "name": "@vendredix/ts-transformers",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "",
   "main": "./index.js",
   "typings": "./index.d.ts",
@@ -21,7 +21,9 @@
     "transformer.js",
     "transformer.d.ts",
     "compiler.js",
-    "compiler.d.ts"
+    "compiler.d.ts",
+    "utils.js",
+    "utils.d.ts"
   ],
   "license": "MIT",
   "devDependencies": {
