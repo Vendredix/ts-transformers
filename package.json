@@ -1,6 +1,6 @@
 {
   "name": "@vendredix/ts-transformers",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "",
   "main": "./index.js",
   "typings": "./index.d.ts",
