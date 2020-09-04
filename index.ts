@@ -10,11 +10,11 @@ export declare function isString(value: any): value is string;
 export declare function isFunction(value: any): value is Function;
 export declare function isSymbol(value: any): value is symbol;
 
-export declare function isPrimitive(value: any): value is number|boolean|string;
+export declare function isPrimitive(value: any): value is number | boolean | string;
 
 export declare function isArray(value: any): value is Array<any>;
 
-/***
+/**
  * Returns whether the given value is a not-null object that is also not an array.
  *
  * @param value
@@ -25,7 +25,7 @@ export declare function isObjectOrArray(value: any): value is object | Array<any
 
 export declare function isIterable(value: any): value is Iterable<any>;
 
-/***
+/**
  * Returns whether the given value is an array of at least a specific number of items.
  *
  * @param value
@@ -33,14 +33,14 @@ export declare function isIterable(value: any): value is Iterable<any>;
  */
 export declare function isMinLengthArray(value: any, length?: number): value is Array<any>;
 
-/***
+/**
  * Returns whether the given value is a non empty string.
  *
  * @param value
  */
 export declare function isNonEmptyString(value: any): value is string;
 
-/***
+/**
  * Returns whether the given value is a string with a minimum length.
  *
  * @param value

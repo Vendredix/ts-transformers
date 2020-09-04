@@ -34,5 +34,6 @@ Thumbs.db
 # Git ONLY
 /*.js.map
 /*.js
+!.eslintrc.js
 /*.d.ts
 /tests/index.js

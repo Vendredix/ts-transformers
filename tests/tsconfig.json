@@ -5,5 +5,17 @@
   },
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "vendredix": {
+    "ts-transformers": {
+      "sourceMapSupport": true,
+      "plugins": [
+        {
+          "transform": "../transformer",
+          "kind": ["before"],
+          "testVariable": "$projectDir/test/$notReplaced/value"
+        }
+      ]
+    }
+  }
 }

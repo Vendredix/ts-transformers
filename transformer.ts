@@ -1,6 +1,6 @@
 import ts from "typescript";
 import path from "path";
-import {createGlobalIdentifier, createLiteral} from "./utils";
+import { createGlobalIdentifier, createLiteral } from "./utils";
 
 enum ApiMethod {
   isNull, isUndefined, isNullOrUndefined,
@@ -18,14 +18,15 @@ enum ApiMethod {
   enumValues,
 }
 
+
 const typeofTransformMap = {
-  "isPrimitive": "isNumberOrBooleanOrString",
-  "isObject": "isObjectAndNotNullAndNotArray",
-  "isObjectOrArray": "isObjectAndNotNull",
-  "isIterable": true,
-  "isMinLengthArray": true, // custom
-  "isNonEmptyString": true,
-  "isMinLengthString": true,
+  isPrimitive: "isNumberOrBooleanOrString",
+  isObject: "isObjectAndNotNullAndNotArray",
+  isObjectOrArray: "isObjectAndNotNull",
+  isIterable: true,
+  isMinLengthArray: true, // custom
+  isNonEmptyString: true,
+  isMinLengthString: true,
 };
 const apiArgCountMap = {
   [ApiMethod.isMinLengthArray]: [1, 2],
@@ -68,7 +69,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
       const apiMethod = getApiExpressionName(node, typeChecker);
       if (apiMethod !== undefined) {
         let newNode: ts.Node = node;
-        let addComment = true;
+        const addComment = true;
 
         if (apiMethod === ApiMethod.enumValues) {
           newNode = transformEnumValuesExpression(factory, node, typeChecker);
@@ -95,7 +96,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         let newNode: ts.Expression = node;
         let addComment = true;
 
-        const {argCount, minArgCount} = getArgumentCount(apiMethod);
+        const { argCount, minArgCount } = getArgumentCount(apiMethod);
 
         let useCallback = false;
         let identifierList: ReadonlyArray<ts.Expression>
@@ -156,7 +157,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
             void 0,
             factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
             newNode as ts.ConciseBody,
-          )
+          );
         }
 
         // if (!context.getCompilerOptions().removeComments && addComment) {
@@ -168,12 +169,12 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
 
       return prevOnSubstituteNode(hint, node);
     }
-  }
+  };
 }
 
-export function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
+function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
   if (!methodName.startsWith("is")) {
-    throw new Error("Invalid method name: " + methodName);
+    throw new Error(`Invalid method name: ${methodName}`);
   }
 
   const [arg0] = args;
@@ -220,8 +221,8 @@ export function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeF
       factory.createBinaryExpression(
         factory.createPropertyAccessExpression(valueExpr, "length"),
         factory.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
-        lengthArg
-      )
+        lengthArg,
+      ),
     );
   }
 
@@ -321,8 +322,7 @@ function transformEnumValuesExpression(factory: ts.NodeFactory, node: ts.CallExp
   const valueList = [];
 
   const type = typeChecker.getTypeFromTypeNode(node.typeArguments[0]);
-  const entries = type.symbol && type.symbol.getDeclarations();
-  const enumDeclaration = entries && entries[0];
+  const enumDeclaration = type.symbol?.getDeclarations()?.[0];
 
   if (enumDeclaration && ts.isEnumDeclaration(enumDeclaration)) {
     for (const member of enumDeclaration.members) {
@@ -354,7 +354,7 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMe
 
   if (ts.isIdentifier(node)) {
     const type = typeChecker.getTypeAtLocation(node);
-    declaration = type && type.symbol && type.symbol.declarations && type.symbol.declarations[0];
+    declaration = type?.symbol?.declarations?.[0];
   }
   else if (ts.isCallExpression(node)) {
     const signature = typeChecker.getResolvedSignature(node);
@@ -366,7 +366,7 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMe
   if (declaration && ts.isFunctionDeclaration(declaration)
     && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
     const text = declaration.name.getText();
-    if (text.charAt(0) !== "$" && typeof ApiMethod[text] === "number") {
+    if (!text.startsWith("$") && typeof ApiMethod[text] === "number") {
       return ApiMethod[text];
     }
   }

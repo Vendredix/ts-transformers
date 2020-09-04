@@ -61,6 +61,7 @@ if (isArray(value)) {
   const stringValues = value.filter<string>(isString);
 }
 if (isObject(value)) {
+  // eslint-disable-next-line no-prototype-builtins
   console.log(value.hasOwnProperty("prop")); // value is an object and not null
 }
 
@@ -89,18 +90,18 @@ if (isSymbol(value)) {
 
 (function () {
   let value: Permissions = Permissions.READ;
-  console.log("Read: " + isBitSet(value, Permissions.READ));
-  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+  console.log(`Read: ${isBitSet(value, Permissions.READ)}`);
+  console.log(`Write: ${isBitSet(value, Permissions.WRITE)}`);
 
   console.log("\nsetting WRITE");
   value = setBits(value, Permissions.WRITE);
-  console.log("Read: " + isBitSet(value, Permissions.READ));
-  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+  console.log(`Read: ${isBitSet(value, Permissions.READ)}`);
+  console.log(`Write: ${isBitSet(value, Permissions.WRITE)}`);
 
   console.log("\nunsetting READ");
   value = unsetBits(value, Permissions.READ);
-  console.log("Read: " + isBitSet(value, Permissions.READ));
-  console.log("Write: " + isBitSet(value, Permissions.WRITE));
+  console.log(`Read: ${isBitSet(value, Permissions.READ)}`);
+  console.log(`Write: ${isBitSet(value, Permissions.WRITE)}`);
 
   value = updateRead(setBits);
   value = updateRead(unsetBits);

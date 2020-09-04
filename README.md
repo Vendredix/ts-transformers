@@ -71,14 +71,60 @@ if (isMinLengthArray(value, 2)) {
 }
 ```
 
-## How to use a transformer
-See [compiler.js](tests/compiler.js) for an example.
+## How to use this transformer
 
-## Similar work
-This transformer is based on work by kimamula.
-Check out kimamula's awesome transformers.
-* [ts-transformer-enumerate](https://github.com/kimamula/ts-transformer-enumerate)
-* [ts-transformer-keys](https://github.com/kimamula/ts-transformer-keys) 
+**Using @vendredix/ts-transformer's compiler interface**. See [tests/tsconfig.json](tests/tsconfig.json) for an example.
+
+Update your `tsconfig.json` as follows and compile with `tstc <tsconfig.json>` or use `compileByConfig` of [compiler.ts](compiler.ts). 
+```json
+{
+  "compilerOptions": {},
+  "vendredix": {
+    "ts-transformers": {
+      "plugins": [
+        { "transform": "@vendredix/ts-transformers/transformer", "kind": ["before"] }
+      ]
+    }
+  }
+}
+```
+
+plugin entries described in PluginConfig:
+
+```typescript
+export interface CompilerConfig {
+  sourceMapSupport?: boolean;
+  plugins?: PluginConfig[];
+}
+export declare const enum PluginType {
+  ProgramBuilder = "builder",
+  Program = "program"
+}
+export declare const enum TransformerKind {
+  Before = "before",
+  After = "after",
+  AfterDeclaration = "afterDeclaration"
+}
+export interface PluginConfig {
+  transform: string;
+  import?: string; // whenever it should be a specific exported function
+  kind?: TransformerKind[]; // default ["after"]
+  type?: PluginType; // default "program"
+  [options: string]: unknown;
+}
+```
+
+**Or using [ttypescript](https://github.com/cevek/ttypescript)**. See their repository for more information.
+```json
+{
+    "compilerOptions": {
+        "plugins": [
+            { "transform": "@vendredix/ts-transformers/transformer", "type": "program" }
+        ]
+    }
+}
+```
+
 
 # License
 
