@@ -36,4 +36,6 @@ Thumbs.db
 /*.js
 !.eslintrc.js
 /*.d.ts
-/tests/index.js
+/tests/*.js
+/tests/*.js.map
+/tests/*.d.ts

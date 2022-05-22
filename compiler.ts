@@ -39,9 +39,9 @@ class Builder {
   #currentProject: ts.InvalidatedProject<any> | undefined;
   #currentPlugins: LoadedPlugins | undefined;
 
-  constructor(public readonly projectDir: string) {
+  constructor(public readonly projectDir: string, defaultOptions: ts.BuildOptions | undefined, private readonly optionsToExtend: ts.CompilerOptions | undefined) {
     const solutionHost = ts.createSolutionBuilderHost(ts.sys, void 0, this._reportDiagnostic.bind(this), this._reportDiagnostic.bind(this));
-    this.#builder = ts.createSolutionBuilder(solutionHost, [projectDir], {});
+    this.#builder = ts.createSolutionBuilder(solutionHost, [projectDir], defaultOptions || {});
   }
 
   public build(): ts.ExitStatus {
@@ -52,8 +52,14 @@ class Builder {
       const project = this.#currentProject;
       const projectDir = path.dirname(project.project);
 
-      const tsConfig = ts.getParsedCommandLineOfConfigFile(project.project, {}, ts.sys as any);
+      const tsConfig = ((this.#builder as any).getAllParsedConfigs() as ts.ParsedCommandLine[])
+        .find(x => x.options.configFilePath === project.project);
       if (!tsConfig) throw new Error("Not loaded");
+
+      // Extend the compiler options
+      if (this.optionsToExtend) {
+        Object.assign(tsConfig.options, this.optionsToExtend);
+      }
 
       const config: CompilerConfig = tsConfig.raw.vendredix?.["ts-transformers"] ?? {};
       if (config.sourceMapSupport) loadSourceMapSupport();
@@ -161,10 +167,10 @@ class Builder {
   }
 }
 
-export function compileByConfig(projectConfigFile: string): number {
+export function compileByConfig(projectConfigFile: string, defaultOptions: ts.BuildOptions | undefined, optionsToExtend: ts.CompilerOptions | undefined): number {
   try {
     const projectDir = path.dirname(path.resolve(projectConfigFile));
-    const builder = new Builder(projectDir);
+    const builder = new Builder(projectDir, defaultOptions, optionsToExtend);
 
     const buildStatus = builder.build();
 
@@ -175,20 +181,27 @@ export function compileByConfig(projectConfigFile: string): number {
     return exitCode;
   }
   catch (err) {
-    if (err.stack !== undefined) {
-      console.warn(err.stack);
-    }
-    else if (err.message !== undefined) {
-      console.warn(err.message);
-    }
-    else if (err.messageText !== undefined) {
-      console.warn(err.messageText);
-    }
-    else {
-      console.warn(err);
-    }
+    warnBuildError(err);
     return 1;
   }
+}
+
+function warnBuildError(err: unknown): void {
+  if (typeof err === "object" && err !== null) {
+    if (err["stack"] !== undefined) {
+      console.warn(err["stack"]);
+      return;
+    }
+    if (err["message"] !== undefined) {
+      console.warn(err["message"]);
+      return;
+    }
+    if (err["messageText"] !== undefined) {
+      console.warn(err["messageText"]);
+      return;
+    }
+  }
+  console.warn(err);
 }
 
 let mapSupportLoaded = false;
@@ -210,6 +223,6 @@ if (require.main === module) {
   if (!configPath) {
     throw new Error("Invalid tsconfig.json path");
   }
-  const code = compileByConfig(configPath);
+  const code = compileByConfig(configPath, void 0, void 0);
   process.exit(code);
 }
