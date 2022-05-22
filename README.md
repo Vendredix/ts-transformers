@@ -41,8 +41,6 @@ import {
   isBoolean, isNumber, isString, isFunction,
   isPrimitive,
   isArray, isObject, isObjectOrArray,
-  isMinLengthArray,
-  isNonEmptyString, isMinLengthString,
 } from "@vendredix/ts-transformers";
 
 let value: any;
@@ -65,9 +63,6 @@ if (isPrimitive(value)) {
 if (isObject(value)) {
   // (typeof value === "object" && value !== null && !Array.isArray(value))
   // value is an object and not null
-}
-if (isMinLengthArray(value, 2)) {
-  // value is an array and value.length >= 2
 }
 ```
 

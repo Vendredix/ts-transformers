@@ -5,8 +5,6 @@ import {
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isIterable,
-  isMinLengthArray,
-  isNonEmptyString, isMinLengthString,
   isBitSet, setBits, unsetBits,
 } from "../index";
 
@@ -65,22 +63,11 @@ if (isObject(value)) {
   console.log(value.hasOwnProperty("prop")); // value is an object and not null
 }
 
-if (isMinLengthArray(value)) {
-  console.log(value.length >= 1);
-}
-if (isMinLengthArray(value, 2) || isObject(value)) {
-  console.log(value);
-}
-
 if (isObjectOrArray(value)) {
   console.log(value);
 }
 
 if (isIterable(value)) {
-  console.log(value);
-}
-
-if (isNonEmptyString(value)) {
   console.log(value);
 }
 

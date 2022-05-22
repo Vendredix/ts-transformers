@@ -25,30 +25,6 @@ export declare function isObjectOrArray(value: any): value is object | Array<any
 
 export declare function isIterable(value: any): value is Iterable<any>;
 
-/**
- * Returns whether the given value is an array of at least a specific number of items.
- *
- * @param value
- * @param {Number} [length = 1]
- */
-export declare function isMinLengthArray(value: any, length?: number): value is Array<any>;
-
-/**
- * Returns whether the given value is a non empty string.
- *
- * @param value
- */
-export declare function isNonEmptyString(value: any): value is string;
-
-/**
- * Returns whether the given value is a string with a minimum length.
- *
- * @param value
- * @param {Number} [length = 1]
- */
-export declare function isMinLengthString(value: any, length?: number): value is string;
-
-
 export declare function isBitSet<T extends number>(value: T, bitmask: T): boolean;
 export declare function setBits<T extends number>(value: T, bitmask: T): T;
 export declare function unsetBits<T extends number>(value: T, bitmask: T): T;

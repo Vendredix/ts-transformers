@@ -8,15 +8,17 @@ enum ApiMethod {
   isPrimitive,
   isArray, isObject, isObjectOrArray,
   isIterable,
-  isMinLengthArray,
-  isNonEmptyString, isMinLengthString,
-  $LAST_TYPEOF_METHOD = isMinLengthString,
+  // isMinLengthArray,
+  // isNonEmptyString, isMinLengthString,
+  // $LAST_TYPEOF_METHOD,
 
   isBitSet, setBits, unsetBits,
-  $LAST_BIT_METHOD = unsetBits,
+  // $LAST_TYPEOF_METHOD
 
   enumValues,
 }
+const $LAST_TYPEOF_METHOD = ApiMethod.isIterable;
+const $LAST_BIT_METHOD = ApiMethod.unsetBits;
 
 
 const typeofTransformMap = {
@@ -24,13 +26,13 @@ const typeofTransformMap = {
   isObject: "isObjectAndNotNullAndNotArray",
   isObjectOrArray: "isObjectAndNotNull",
   isIterable: true,
-  isMinLengthArray: true, // custom
-  isNonEmptyString: true,
-  isMinLengthString: true,
+  // isMinLengthArray: true,
+  // isNonEmptyString: true, // custom
+  // isMinLengthString: true,
 };
 const apiArgCountMap = {
-  [ApiMethod.isMinLengthArray]: [1, 2],
-  [ApiMethod.isMinLengthString]: [1, 2],
+  // [ApiMethod.isMinLengthArray]: [1, 2],
+  // [ApiMethod.isMinLengthString]: [1, 2],
   [ApiMethod.isBitSet]: 2,
   [ApiMethod.setBits]: 2,
   [ApiMethod.unsetBits]: 2,
@@ -195,36 +197,36 @@ function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory,
     );
   }
 
-  if (["isMinLengthArray", "isNonEmptyString", "isMinLengthString"].includes(methodName)) {
-    let lengthArg: ts.Expression;
-
-    // Determine the length argument
-    if (args.length === 0 || typeof arg0 === "number") {
-      const length = args.length === 0 ? 1 : arg0;
-      lengthArg = factory.createNumericLiteral(length);
-    }
-    else if (ts.isLiteralExpression(arg0) || ts.isIdentifier(arg0)
-      || ts.isCallExpression(arg0)
-      || ts.isElementAccessExpression(arg0) || ts.isPropertyAccessExpression(arg0)) {
-      lengthArg = arg0;
-    }
-    else {
-      throw new Error(`Invalid length argument for ${methodName}!`);
-    }
-
-    const type = methodName.split(/(?=[A-Z])/).pop()!;
-
-    // Create `isArray(value) && value.length >= length` expression.
-    return factory.createBinaryExpression(
-      createTypeOfExpression(program, factory, type, valueExpr),
-      factory.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
-      factory.createBinaryExpression(
-        factory.createPropertyAccessExpression(valueExpr, "length"),
-        factory.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
-        lengthArg,
-      ),
-    );
-  }
+  // if (["isMinLengthArray", "isNonEmptyString", "isMinLengthString"].includes(methodName)) {
+  //   let lengthArg: ts.Expression;
+  //
+  //   // Determine the length argument
+  //   if (args.length === 0 || typeof arg0 === "number") {
+  //     const length = args.length === 0 ? 1 : arg0;
+  //     lengthArg = factory.createNumericLiteral(length);
+  //   }
+  //   else if (ts.isLiteralExpression(arg0) || ts.isIdentifier(arg0)
+  //     || ts.isCallExpression(arg0)
+  //     || ts.isElementAccessExpression(arg0) || ts.isPropertyAccessExpression(arg0)) {
+  //     lengthArg = arg0;
+  //   }
+  //   else {
+  //     throw new Error(`Invalid length argument for ${methodName}!`);
+  //   }
+  //
+  //   const type = methodName.split(/(?=[A-Z])/).pop()!;
+  //
+  //   // Create `isArray(value) && value.length >= length` expression.
+  //   return factory.createBinaryExpression(
+  //     createTypeOfExpression(program, factory, type, valueExpr),
+  //     factory.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
+  //     factory.createBinaryExpression(
+  //       factory.createPropertyAccessExpression(valueExpr, "length"),
+  //       factory.createToken(ts.SyntaxKind.GreaterThanEqualsToken),
+  //       lengthArg,
+  //     ),
+  //   );
+  // }
 
   // Transform the method name
   if (typeofTransformMap[methodName]) {
@@ -392,10 +394,10 @@ function getArgumentCount(method: ApiMethod) {
 }
 
 function isTypeofMethod(method: ApiMethod): boolean {
-  return method <= ApiMethod.$LAST_TYPEOF_METHOD;
+  return method <= $LAST_TYPEOF_METHOD;
 }
 function isBitMethod(method: ApiMethod): boolean {
-  return method > ApiMethod.$LAST_TYPEOF_METHOD && method <= ApiMethod.$LAST_BIT_METHOD;
+  return method > $LAST_TYPEOF_METHOD && method <= $LAST_BIT_METHOD;
 }
 
 function isApiModulePath(filePath: string): boolean {
