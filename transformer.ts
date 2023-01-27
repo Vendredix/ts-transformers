@@ -118,7 +118,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
 
           for (let i = 0; i < argCount; i++) {
             list[i] = factory.createTempVariable(undefined);
-            paramList[i] = factory.createParameterDeclaration(void 0, void 0, void 0, list[i], void 0, void 0, void 0);
+            paramList[i] = factory.createParameterDeclaration(void 0 as ts.ModifierLike[] | undefined, void 0, list[0], void 0, void 0, void 0);
           }
           identifierList = list;
         }

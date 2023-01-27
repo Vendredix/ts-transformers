@@ -51,17 +51,18 @@ class Builder {
     while (this.#currentProject = this.#builder.getNextInvalidatedProject()) {
       const project = this.#currentProject;
       const projectDir = path.dirname(project.project);
+      const compilerOptions = project.getCompilerOptions();
+      const configFile = (compilerOptions as any).configFile as ts.SourceFile;
 
-      const tsConfig = ((this.#builder as any).getAllParsedConfigs() as ts.ParsedCommandLine[])
-        .find(x => x.options.configFilePath === project.project);
-      if (!tsConfig) throw new Error("Not loaded");
+      if (!configFile) throw new Error("Not loaded");
+      const configFileRaw = JSON.parse(configFile.text);
 
       // Extend the compiler options
       if (this.optionsToExtend) {
-        Object.assign(tsConfig.options, this.optionsToExtend);
+        Object.assign(compilerOptions, this.optionsToExtend);
       }
 
-      const config: CompilerConfig = tsConfig.raw.vendredix?.["ts-transformers"] ?? {};
+      const config: CompilerConfig = configFileRaw.vendredix?.["ts-transformers"] ?? {};
       if (config.sourceMapSupport) loadSourceMapSupport();
 
       // Load transformers from ts config
