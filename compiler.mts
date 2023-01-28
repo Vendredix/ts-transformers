@@ -219,7 +219,7 @@ async function loadSourceMapSupport(): Promise<void> {
   return import("source-map-support/register.js");
 }
 
-if (import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) {
+if ((import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) || /\/node_modules\/.bin\/tstc(\.\w+)*$/.test(process.argv[1])) {
   const configPath = process.argv[2];
   if (!configPath) {
     throw new Error("Invalid tsconfig.json path");
