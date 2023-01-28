@@ -16,6 +16,7 @@
   "scripts": {
     "lint": "eslint . --ext ts,mts",
     "compile": "tsc -p ./tsconfig.json",
+    "clean": "tsc --build --clean ./tsconfig.json",
     "compile-test": "node compiler.js ./tests/tsconfig.json",
     "build": "npm run lint && npm run compile"
   },
