@@ -1,14 +1,9 @@
 name: Publish
 on:
-  workflow_run:
-    workflows: ["Tests"]
-    branches:
-      - v*
-    types:
-      - completed
+  release:
+    types: [created]
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
