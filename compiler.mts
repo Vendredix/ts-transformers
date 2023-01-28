@@ -216,7 +216,7 @@ async function loadSourceMapSupport(): Promise<void> {
   mapSupportLoaded = true;
 
   // @ts-expect-error no declarations
-  import("source-map-support/register.js");
+  return import("source-map-support/register.js");
 }
 
 if (import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) {
