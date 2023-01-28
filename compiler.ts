@@ -36,7 +36,7 @@ class Builder {
   #diagnosticCount: number = 0;
   readonly #builder: ts.SolutionBuilder<any>;
 
-  #currentProject: ts.InvalidatedProject<any> | undefined;
+  #currentProject: ts.InvalidatedProject<ts.BuilderProgram> | undefined;
   #currentPlugins: LoadedPlugins | undefined;
 
   constructor(public readonly projectDir: string, defaultOptions: ts.BuildOptions | undefined, private readonly optionsToExtend: ts.CompilerOptions | undefined) {
@@ -65,11 +65,14 @@ class Builder {
       const config: CompilerConfig = configFileRaw.vendredix?.["ts-transformers"] ?? {};
       if (config.sourceMapSupport) loadSourceMapSupport();
 
-      // Load transformers from ts config
-      const plugins = this._loadPlugins(config, (project as any).getBuilderProgram() as ts.BuilderProgram, projectDir);
-      this.#currentPlugins = plugins;
+      let plugins: LoadedPlugins | undefined;
+      if (project.kind === ts.InvalidatedProjectKind.Build) {
+        // Load transformers from ts config
+        plugins = this._loadPlugins(config, project.getBuilderProgram()!, projectDir);
+        this.#currentPlugins = plugins;
+      }
 
-      exitStatus = project.done(void 0, void 0, plugins.transformers);
+      exitStatus = project.done(void 0, void 0, plugins?.transformers);
       this.#currentPlugins = undefined;
 
       if (![ts.ExitStatus.Success, ts.ExitStatus.DiagnosticsPresent_OutputsGenerated].includes(exitStatus)) {
