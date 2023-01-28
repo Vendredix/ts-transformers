@@ -1,6 +1,9 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import path from "path";
-import { createGlobalIdentifier, createLiteral } from "./utils";
+import { createGlobalIdentifier, createLiteral } from "./utils.mjs";
+
+const transformerDirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "index");
 
 enum ApiMethod {
   isNull, isUndefined, isNullOrUndefined,
@@ -401,5 +404,5 @@ function isBitMethod(method: ApiMethod): boolean {
 }
 
 function isApiModulePath(filePath: string): boolean {
-  return path.resolve(filePath).startsWith(path.join(__dirname, "index"));
+  return path.resolve(filePath).startsWith(transformerDirname);
 }

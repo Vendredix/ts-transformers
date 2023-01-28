@@ -16,8 +16,10 @@ module.exports = {
   ],
   ignorePatterns: [
     "**/*.js",
+    "**/*.mjs",
     "!.eslintrc.js",
     "**/*.d.ts",
+    "**/*.d.mts",
   ],
   rules: {
     indent: 0,
@@ -144,13 +146,13 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["*.js"],
+      files: ["*.js", "*.mjs"],
       rules: {
         "@typescript-eslint/no-var-requires": 0,
       },
     },
     {
-      files: ["*.ts"],
+      files: ["*.ts", "*.mts"],
       parserOptions: {
         project: [
           "./tsconfig.json",

@@ -77,7 +77,7 @@ Update your `tsconfig.json` as follows and compile with `tstc <tsconfig.json>` o
   "vendredix": {
     "ts-transformers": {
       "plugins": [
-        { "transform": "@vendredix/ts-transformers/transformer", "kind": ["before"] }
+        { "transform": "@vendredix/ts-transformers/transformer.mjs", "kind": ["before"] }
       ]
     }
   }
@@ -114,7 +114,7 @@ export interface PluginConfig {
 {
     "compilerOptions": {
         "plugins": [
-            { "transform": "@vendredix/ts-transformers/transformer", "type": "program" }
+            { "transform": "@vendredix/ts-transformers/transformer.mjs", "type": "program" }
         ]
     }
 }

@@ -11,7 +11,7 @@
       "sourceMapSupport": true,
       "plugins": [
         {
-          "transform": "../transformer",
+          "transform": "../transformer.mjs",
           "kind": ["before"],
           "testVariable": "$projectDir/test/$notReplaced/value"
         }

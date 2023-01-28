@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import * as ts from "typescript";
-import * as path from "path";
-import { createRequire } from "module";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
 
 export interface CompilerConfig {
   sourceMapSupport?: boolean;
@@ -44,7 +44,7 @@ class Builder {
     this.#builder = ts.createSolutionBuilder(solutionHost, [projectDir], defaultOptions || {});
   }
 
-  public build(): ts.ExitStatus {
+  public async build(): Promise<ts.ExitStatus> {
     let exitStatus: ts.ExitStatus = ts.ExitStatus.Success;
 
     // eslint-disable-next-line no-cond-assign
@@ -63,12 +63,12 @@ class Builder {
       }
 
       const config: CompilerConfig = configFileRaw.vendredix?.["ts-transformers"] ?? {};
-      if (config.sourceMapSupport) loadSourceMapSupport();
+      if (config.sourceMapSupport) await loadSourceMapSupport();
 
       let plugins: LoadedPlugins | undefined;
       if (project.kind === ts.InvalidatedProjectKind.Build) {
         // Load transformers from ts config
-        plugins = this._loadPlugins(config, project.getBuilderProgram()!, projectDir);
+        plugins = await this._loadPlugins(config, project.getBuilderProgram()!, projectDir);
         this.#currentPlugins = plugins;
       }
 
@@ -84,25 +84,26 @@ class Builder {
     return exitStatus;
   }
 
-  private _loadPlugins(config: CompilerConfig, program: ts.BuilderProgram, projectDir: string): LoadedPlugins {
+  private async _loadPlugins(config: CompilerConfig, program: ts.BuilderProgram, projectDir: string): Promise<LoadedPlugins> {
     const plugins: LoadedPlugins = {
       transformers: {},
     };
     if (!config.plugins) return plugins;
-
-    const requireModule = createRequire(`${projectDir}/tsconfig.json`);
 
     for (const plugin of config.plugins) {
       const { transform: pluginName, import: importName, type = PluginType.Program, kind = ["after"], ...options } = plugin;
 
       let pluginPath = pluginName;
       if (pluginPath.startsWith(".")) {
-        pluginPath = path.resolve(projectDir, pluginPath);
+        pluginPath = pathToFileURL(path.resolve(projectDir, pluginPath)).toString();
       }
 
 
-      let factory = requireModule(pluginPath);
+      let factory = await import(pluginPath);
       if (importName) factory = factory[importName];
+      else if (factory.__esModule && factory.default) {
+        while (factory.__esModule) factory = factory.default;
+      }
       else if (factory.default) factory = factory.default;
 
       this._updateOptions(options, {
@@ -171,12 +172,12 @@ class Builder {
   }
 }
 
-export function compileByConfig(projectConfigFile: string, defaultOptions: ts.BuildOptions | undefined, optionsToExtend: ts.CompilerOptions | undefined): number {
+export async function compileByConfig(projectConfigFile: string, defaultOptions: ts.BuildOptions | undefined, optionsToExtend: ts.CompilerOptions | undefined): Promise<number> {
   try {
     const projectDir = path.dirname(path.resolve(projectConfigFile));
     const builder = new Builder(projectDir, defaultOptions, optionsToExtend);
 
-    const buildStatus = builder.build();
+    const buildStatus = await builder.build();
 
     // Done!
     const exitCode = buildStatus !== ts.ExitStatus.Success ? 1 : 0;
@@ -210,23 +211,19 @@ function warnBuildError(err: unknown): void {
 
 let mapSupportLoaded = false;
 
-function loadSourceMapSupport(): void {
+async function loadSourceMapSupport(): Promise<void> {
   if (mapSupportLoaded) return;
   mapSupportLoaded = true;
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const sourceMapSupport = require("source-map-support");
-  sourceMapSupport.install({
-    environment: "node",
-  });
+  // @ts-expect-error no declarations
+  import("source-map-support/register.js");
 }
 
-
-if (require.main === module) {
+if (import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) {
   const configPath = process.argv[2];
   if (!configPath) {
     throw new Error("Invalid tsconfig.json path");
   }
-  const code = compileByConfig(configPath, void 0, void 0);
+  const code = await compileByConfig(configPath, void 0, void 0);
   process.exit(code);
 }

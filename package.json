@@ -14,28 +14,27 @@
     "url": "https://github.com/Vendredix/ts-transformers.git"
   },
   "scripts": {
-    "lint": "eslint . --ext ts",
+    "lint": "eslint . --ext ts,mts",
     "compile": "tsc -p ./tsconfig.json",
     "compile-test": "node compiler.js ./tests/tsconfig.json",
     "build": "npm run lint && npm run compile"
   },
   "bin": {
-    "tstc": "./compiler.js"
+    "tstc": "./compiler.mjs"
   },
   "files": [
     "index.js",
     "index.d.ts",
-    "transformer.js",
-    "transformer.d.ts",
-    "compiler.js",
-    "compiler.d.ts",
-    "utils.js",
-    "utils.d.ts"
+    "transformer.mjs",
+    "transformer.d.mts",
+    "compiler.mjs",
+    "compiler.d.mts",
+    "utils.mjs",
+    "utils.d.mts"
   ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.11.18",
-    "@types/source-map-support": "^0.5.6",
     "@typescript-eslint/eslint-plugin": "^5.49.0",
     "@typescript-eslint/parser": "^5.49.0",
     "eslint": "^8.32.0",

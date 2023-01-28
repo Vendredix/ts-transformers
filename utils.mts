@@ -1,11 +1,11 @@
-import * as ts from "typescript";
+import ts from "typescript";
 
 export function createLiteral(factory: ts.NodeFactory, value: string | number | bigint | ts.PseudoBigInt | boolean | ts.StringLiteral | ts.NoSubstitutionTemplateLiteral | ts.NumericLiteral | ts.Identifier): ts.PrimaryExpression {
   if (typeof value === "number") {
     return factory.createNumericLiteral(value);
   }
   if (typeof value === "bigint" || (typeof value === "object" && "base10Value" in value)) {
-    return factory.createBigIntLiteral(<ts.PseudoBigInt> value);
+    return factory.createBigIntLiteral(value as ts.PseudoBigInt);
   }
   if (typeof value === "boolean") {
     return value ? factory.createTrue() : factory.createFalse();
