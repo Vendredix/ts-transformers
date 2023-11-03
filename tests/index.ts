@@ -34,6 +34,9 @@ if (isUndefined(value)) {
 if (isNullOrUndefined(value)) {
   console.log(value); // value is null | undefined
 }
+if (isPrimitive(value)) {
+  console.log(value); // value is string | number | boolean
+}
 if (isNumber(value)) {
   console.log(value + 123); // value is a number
 }

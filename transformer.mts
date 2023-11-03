@@ -24,16 +24,16 @@ const $LAST_TYPEOF_METHOD = ApiMethod.isIterable;
 const $LAST_BIT_METHOD = ApiMethod.unsetBits;
 
 
-const typeofTransformMap = {
-  isPrimitive: "isNumberOrBooleanOrString",
-  isObject: "isObjectAndNotNullAndNotArray",
-  isObjectOrArray: "isObjectAndNotNull",
-  isIterable: true,
-  // isMinLengthArray: true,
-  // isNonEmptyString: true, // custom
-  // isMinLengthString: true,
-};
-const apiArgCountMap = {
+const typeofTransformMap: Record<string, string | true> = {
+  [ApiMethod.isPrimitive]: "isNumberOrBooleanOrString",
+  [ApiMethod.isObject]: "isObjectAndNotNullAndNotArray",
+  [ApiMethod.isObjectOrArray]: "isObjectAndNotNull",
+  [ApiMethod.isIterable]: true,
+  // [ApiMethod.isMinLengthArray]: true,
+  // [ApiMethod.isNonEmptyString]: true, // custom
+  // [ApiMethod.isMinLengthString]: true,
+} as const;
+const apiArgCountMap: Record<string, number | readonly number[]> = {
   // [ApiMethod.isMinLengthArray]: [1, 2],
   // [ApiMethod.isMinLengthString]: [1, 2],
   [ApiMethod.isBitSet]: 2,
@@ -134,7 +134,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
             identifierList[0],
             ...identifierList.slice(1),
           )!;
-          addComment = Boolean(typeofTransformMap[methodName]);
+          addComment = Boolean(typeofTransformMap[apiMethod]);
         }
         else if (isBitMethod(apiMethod)) {
           switch (apiMethod) {
@@ -181,6 +181,7 @@ function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory,
   if (!methodName.startsWith("is")) {
     throw new Error(`Invalid method name: ${methodName}`);
   }
+  const apiMethod = ApiMethod[methodName as any] as unknown as ApiMethod | undefined;
 
   const [arg0] = args;
 
@@ -232,8 +233,12 @@ function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory,
   // }
 
   // Transform the method name
-  if (typeofTransformMap[methodName]) {
-    methodName = typeofTransformMap[methodName];
+  if (apiMethod && typeofTransformMap[apiMethod]) {
+    const val = typeofTransformMap[apiMethod];
+    if (typeof val === "boolean") {
+      throw new Error(`Did not expect this config for ${methodName}`);
+    }
+    methodName = val;
   }
 
   const typeList: string[] = methodName.substring(2).split(/(?=[A-Z])/);
@@ -371,8 +376,8 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMe
   if (declaration && ts.isFunctionDeclaration(declaration)
     && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
     const text = declaration.name.getText();
-    if (!text.startsWith("$") && typeof ApiMethod[text] === "number") {
-      return ApiMethod[text];
+    if (!text.startsWith("$") && typeof ApiMethod[text as any] === "number") {
+      return ApiMethod[text as any] as unknown as ApiMethod;
     }
   }
   return;

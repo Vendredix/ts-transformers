@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import ts from "typescript";
+import ts, { CustomTransformers } from "typescript";
 
 export interface CompilerConfig {
   sourceMapSupport?: boolean;
@@ -13,11 +13,7 @@ export const enum PluginType {
   Program = "program",
 }
 
-export const enum TransformerKind {
-  Before = "before",
-  After = "after",
-  AfterDeclaration = "afterDeclaration",
-}
+export declare type TransformerKind = keyof ts.CustomTransformers;
 
 export interface PluginConfig {
   transform: string;
@@ -121,7 +117,7 @@ class Builder {
 
       for (const target of kind) {
         if (!plugins.transformers[target]) plugins.transformers[target] = [];
-        plugins.transformers[target].push(transformer);
+        plugins.transformers[target]!.push(transformer);
       }
     }
 
@@ -129,12 +125,12 @@ class Builder {
     return plugins;
   }
 
-  private _updateOptions(options: object, context: object): void {
+  private _updateOptions(options: Record<string, any>, context: Record<string, any>): void {
     for (const [key, value] of Object.entries(options)) {
       if (typeof value !== "string") {
         continue;
       }
-      const newValue = value.replace(/\$(\w+)/g, (value, match) => {
+      const newValue: unknown = value.replace(/\$(\w+)/g, (value, match: string) => {
         if (context[match]) {
           return context[match];
         }
@@ -191,7 +187,7 @@ export async function compileByConfig(projectConfigFile: string, defaultOptions:
   }
 }
 
-function warnBuildError(err: unknown): void {
+function warnBuildError(err: any): void {
   if (typeof err === "object" && err !== null) {
     if (err["stack"] !== undefined) {
       console.warn(err["stack"]);

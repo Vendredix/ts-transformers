@@ -7,7 +7,6 @@
     "strict": true,
     "esModuleInterop": true,
     "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
     "noEmitOnError": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
