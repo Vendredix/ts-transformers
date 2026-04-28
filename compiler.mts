@@ -35,15 +35,24 @@ class Builder {
   #currentProject: ts.InvalidatedProject<ts.BuilderProgram> | undefined;
   #currentPlugins: LoadedPlugins | undefined;
 
-  constructor(public readonly projectDir: string, defaultOptions: ts.BuildOptions | undefined, private readonly optionsToExtend: ts.CompilerOptions | undefined) {
-    const solutionHost = ts.createSolutionBuilderHost(ts.sys, void 0, this._reportDiagnostic.bind(this), this._reportDiagnostic.bind(this));
+  constructor(
+    public readonly projectDir: string,
+    defaultOptions: ts.BuildOptions | undefined,
+    private readonly optionsToExtend: ts.CompilerOptions | undefined,
+  ) {
+    const solutionHost = ts.createSolutionBuilderHost(
+      ts.sys,
+      void 0,
+      this._reportDiagnostic.bind(this),
+      this._reportDiagnostic.bind(this),
+    );
     this.#builder = ts.createSolutionBuilder(solutionHost, [projectDir], defaultOptions || {});
   }
 
   public async build(): Promise<ts.ExitStatus> {
     let exitStatus: ts.ExitStatus = ts.ExitStatus.Success;
 
-    while (this.#currentProject = this.#builder.getNextInvalidatedProject()) {
+    while ((this.#currentProject = this.#builder.getNextInvalidatedProject())) {
       const project = this.#currentProject;
       const projectDir = path.dirname(project.project);
       const compilerOptions = project.getCompilerOptions();
@@ -79,20 +88,29 @@ class Builder {
     return exitStatus;
   }
 
-  private async _loadPlugins(config: CompilerConfig, program: ts.BuilderProgram, projectDir: string): Promise<LoadedPlugins> {
+  private async _loadPlugins(
+    config: CompilerConfig,
+    program: ts.BuilderProgram,
+    projectDir: string,
+  ): Promise<LoadedPlugins> {
     const plugins: LoadedPlugins = {
       transformers: {},
     };
     if (!config.plugins) return plugins;
 
     for (const plugin of config.plugins) {
-      const { transform: pluginName, import: importName, type = PluginType.Program, kind = ["after"], ...options } = plugin;
+      const {
+        transform: pluginName,
+        import: importName,
+        type = PluginType.Program,
+        kind = ["after"],
+        ...options
+      } = plugin;
 
       let pluginPath = pluginName;
       if (pluginPath.startsWith(".")) {
         pluginPath = pathToFileURL(path.resolve(projectDir, pluginPath)).toString();
       }
-
 
       let factory = await import(pluginPath);
       if (importName) factory = factory[importName];
@@ -113,13 +131,11 @@ class Builder {
         transformer = factory(program.getProgram(), options);
       }
 
-
       for (const target of kind) {
         if (!plugins.transformers[target]) plugins.transformers[target] = [];
         plugins.transformers[target]!.push(transformer);
       }
     }
-
 
     return plugins;
   }
@@ -167,7 +183,11 @@ class Builder {
   }
 }
 
-export async function compileByConfig(projectConfigFile: string, defaultOptions: ts.BuildOptions | undefined, optionsToExtend: ts.CompilerOptions | undefined): Promise<number> {
+export async function compileByConfig(
+  projectConfigFile: string,
+  defaultOptions: ts.BuildOptions | undefined,
+  optionsToExtend: ts.CompilerOptions | undefined,
+): Promise<number> {
   try {
     const projectDir = path.dirname(path.resolve(projectConfigFile));
     const builder = new Builder(projectDir, defaultOptions, optionsToExtend);
@@ -214,7 +234,10 @@ async function loadSourceMapSupport(): Promise<void> {
   return import("source-map-support/register.js");
 }
 
-if ((import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) || /\/node_modules\/.bin\/tstc(\.\w+)*$/.test(process.argv[1])) {
+if (
+  (import.meta.url.startsWith("file:") && process.argv[1] === fileURLToPath(import.meta.url)) ||
+  /\/node_modules\/.bin\/tstc(\.\w+)*$/.test(process.argv[1])
+) {
   const configPath = process.argv[2];
   if (!configPath) {
     throw new Error("Invalid tsconfig.json path");

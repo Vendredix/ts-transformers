@@ -1,11 +1,22 @@
 import {
   enumValues,
-  isNull, isUndefined, isNullOrUndefined,
-  isBoolean, isNumber, isBigint, isString, isFunction, isSymbol,
+  isNull,
+  isUndefined,
+  isNullOrUndefined,
+  isBoolean,
+  isNumber,
+  isBigint,
+  isString,
+  isFunction,
+  isSymbol,
   isPrimitive,
-  isArray, isObject, isObjectOrArray,
+  isArray,
+  isObject,
+  isObjectOrArray,
   isIterable,
-  isBitSet, setBits, unsetBits,
+  isBitSet,
+  setBits,
+  unsetBits,
 } from "../index";
 
 declare const enum Permissions {

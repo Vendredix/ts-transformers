@@ -1,6 +1,18 @@
 import ts from "typescript";
 
-export function createLiteral(factory: ts.NodeFactory, value: string | number | bigint | ts.PseudoBigInt | boolean | ts.StringLiteral | ts.NoSubstitutionTemplateLiteral | ts.NumericLiteral | ts.Identifier): ts.PrimaryExpression {
+export function createLiteral(
+  factory: ts.NodeFactory,
+  value:
+    | string
+    | number
+    | bigint
+    | ts.PseudoBigInt
+    | boolean
+    | ts.StringLiteral
+    | ts.NoSubstitutionTemplateLiteral
+    | ts.NumericLiteral
+    | ts.Identifier,
+): ts.PrimaryExpression {
   if (typeof value === "number") {
     return factory.createNumericLiteral(value);
   }
@@ -15,7 +27,6 @@ export function createLiteral(factory: ts.NodeFactory, value: string | number | 
   }
   return factory.createStringLiteralFromNode(value);
 }
-
 
 export function createGlobalIdentifier(program: ts.Program, factory: ts.NodeFactory): ts.Identifier {
   const target = program.getCompilerOptions().target;

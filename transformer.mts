@@ -6,23 +6,33 @@ import { createGlobalIdentifier, createLiteral } from "./utils.mjs";
 const transformerDirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "index");
 
 enum ApiMethod {
-  isNull, isUndefined, isNullOrUndefined,
-  isNumber, isBoolean, isBigint, isString, isFunction, isSymbol,
+  isNull,
+  isUndefined,
+  isNullOrUndefined,
+  isNumber,
+  isBoolean,
+  isBigint,
+  isString,
+  isFunction,
+  isSymbol,
   isPrimitive,
-  isArray, isObject, isObjectOrArray,
+  isArray,
+  isObject,
+  isObjectOrArray,
   isIterable,
   // isMinLengthArray,
   // isNonEmptyString, isMinLengthString,
   // $LAST_TYPEOF_METHOD,
 
-  isBitSet, setBits, unsetBits,
+  isBitSet,
+  setBits,
+  unsetBits,
   // $LAST_TYPEOF_METHOD
 
   enumValues,
 }
 const $LAST_TYPEOF_METHOD = ApiMethod.isIterable;
 const $LAST_BIT_METHOD = ApiMethod.unsetBits;
-
 
 const typeofTransformMap: Record<string, string | true> = {
   [ApiMethod.isPrimitive]: "isNumberOrBooleanOrString",
@@ -41,7 +51,9 @@ const apiArgCountMap: Record<string, number | readonly number[]> = {
   [ApiMethod.unsetBits]: 2,
 };
 
-export default function transformer(programOrGetter: ts.Program | (() => ts.Program)): ts.TransformerFactory<ts.SourceFile> {
+export default function transformer(
+  programOrGetter: ts.Program | (() => ts.Program),
+): ts.TransformerFactory<ts.SourceFile> {
   return (context: ts.TransformationContext) => {
     const program = typeof programOrGetter === "function" ? programOrGetter() : programOrGetter;
 
@@ -58,9 +70,8 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
     function visitNodeAndChildren(node: ts.SourceFile): ts.SourceFile;
     function visitNodeAndChildren(node: ts.Node): ts.Node;
     function visitNodeAndChildren(node: ts.Node): ts.Node | undefined {
-      return ts.visitEachChild(visitNode(node), childNode => visitNodeAndChildren(childNode), context);
+      return ts.visitEachChild(visitNode(node), (childNode) => visitNodeAndChildren(childNode), context);
     }
-
 
     function visitNode(node: ts.Node): ts.Node | undefined {
       if (isApiImportExpression(node, typeChecker)) {
@@ -104,8 +115,7 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
         const { argCount, minArgCount } = getArgumentCount(apiMethod);
 
         let useCallback = false;
-        let identifierList: ReadonlyArray<ts.Expression>
-          , paramList: ts.ParameterDeclaration[];
+        let identifierList: ReadonlyArray<ts.Expression>, paramList: ts.ParameterDeclaration[];
 
         if (ts.isCallExpression(node)) {
           if (node.arguments.length < minArgCount) {
@@ -121,7 +131,14 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
 
           for (let i = 0; i < argCount; i++) {
             list[i] = factory.createTempVariable(undefined);
-            paramList[i] = factory.createParameterDeclaration(void 0 as ts.ModifierLike[] | undefined, void 0, list[0], void 0, void 0, void 0);
+            paramList[i] = factory.createParameterDeclaration(
+              void 0 as ts.ModifierLike[] | undefined,
+              void 0,
+              list[0],
+              void 0,
+              void 0,
+              void 0,
+            );
           }
           identifierList = list;
         }
@@ -177,7 +194,13 @@ export default function transformer(programOrGetter: ts.Program | (() => ts.Prog
   };
 }
 
-function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, methodName: string, valueExpr: ts.Expression, ...args: any[]): ts.Expression | undefined | never {
+function createApiTypeOfExpression(
+  program: ts.Program,
+  factory: ts.NodeFactory,
+  methodName: string,
+  valueExpr: ts.Expression,
+  ...args: any[]
+): ts.Expression | undefined | never {
   if (!methodName.startsWith("is")) {
     throw new Error(`Invalid method name: ${methodName}`);
   }
@@ -195,7 +218,13 @@ function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory,
         "isFunction",
         factory.createElementAccessExpression(
           valueExpr,
-          factory.createPropertyAccessExpression(factory.createPropertyAccessExpression(createGlobalIdentifier(program, factory), factory.createIdentifier("Symbol")), "iterator"),
+          factory.createPropertyAccessExpression(
+            factory.createPropertyAccessExpression(
+              createGlobalIdentifier(program, factory),
+              factory.createIdentifier("Symbol"),
+            ),
+            "iterator",
+          ),
         ),
       )!,
     );
@@ -266,15 +295,29 @@ function createApiTypeOfExpression(program: ts.Program, factory: ts.NodeFactory,
   return expression;
 }
 
-function createTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, type: string, valueExpr: ts.Expression, negated: boolean = false): ts.Expression {
+function createTypeOfExpression(
+  program: ts.Program,
+  factory: ts.NodeFactory,
+  type: string,
+  valueExpr: ts.Expression,
+  negated: boolean = false,
+): ts.Expression {
   let expr: ts.Expression;
 
-  const equalityTokenType = negated ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken;
+  const equalityTokenType = negated
+    ? ts.SyntaxKind.ExclamationEqualsEqualsToken
+    : ts.SyntaxKind.EqualsEqualsEqualsToken;
 
   // Array.isArray(value)
   if (type === "Array") {
     expr = factory.createCallExpression(
-      factory.createPropertyAccessExpression(factory.createPropertyAccessExpression(createGlobalIdentifier(program, factory), factory.createIdentifier("Array")), "isArray"),
+      factory.createPropertyAccessExpression(
+        factory.createPropertyAccessExpression(
+          createGlobalIdentifier(program, factory),
+          factory.createIdentifier("Array"),
+        ),
+        "isArray",
+      ),
       void 0,
       [valueExpr],
     );
@@ -284,48 +327,70 @@ function createTypeOfExpression(program: ts.Program, factory: ts.NodeFactory, ty
   }
   // value === null || value === undefined
   else if (type === "Null" || type === "Undefined") {
-    expr = factory.createBinaryExpression(valueExpr, factory.createToken(equalityTokenType), type === "Null" ? factory.createNull() : factory.createVoidZero());
+    expr = factory.createBinaryExpression(
+      valueExpr,
+      factory.createToken(equalityTokenType),
+      type === "Null" ? factory.createNull() : factory.createVoidZero(),
+    );
   }
   // Else: typeof value === "${type}"
   else {
-    expr = factory.createBinaryExpression(factory.createTypeOfExpression(valueExpr), factory.createToken(equalityTokenType), factory.createStringLiteral(type.toLowerCase()));
+    expr = factory.createBinaryExpression(
+      factory.createTypeOfExpression(valueExpr),
+      factory.createToken(equalityTokenType),
+      factory.createStringLiteral(type.toLowerCase()),
+    );
   }
 
   return expr;
 }
 
-function createIsBitSet(factory: ts.NodeFactory, left: ts.Expression, right: ts.Expression, invert?: boolean): ts.Expression {
+function createIsBitSet(
+  factory: ts.NodeFactory,
+  left: ts.Expression,
+  right: ts.Expression,
+  invert?: boolean,
+): ts.Expression {
   // ((left & right) === right)
-  return factory.createParenthesizedExpression(factory.createBinaryExpression(
-    factory.createParenthesizedExpression(factory.createBinaryExpression(
-      left,
-      factory.createToken(ts.SyntaxKind.AmpersandToken),
+  return factory.createParenthesizedExpression(
+    factory.createBinaryExpression(
+      factory.createParenthesizedExpression(
+        factory.createBinaryExpression(left, factory.createToken(ts.SyntaxKind.AmpersandToken), right),
+      ),
+      factory.createToken(invert ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken),
       right,
-    )),
-    factory.createToken(invert ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken),
-    right,
-  ));
+    ),
+  );
 }
 
-function createSetBits(factory: ts.NodeFactory, left: ts.Expression, right: ts.Expression, unset: boolean): ts.Expression {
+function createSetBits(
+  factory: ts.NodeFactory,
+  left: ts.Expression,
+  right: ts.Expression,
+  unset: boolean,
+): ts.Expression {
   // (left & ~right)
   if (unset) {
-    return factory.createParenthesizedExpression(factory.createBinaryExpression(
-      left,
-      factory.createToken(ts.SyntaxKind.AmpersandToken),
-      factory.createPrefixUnaryExpression(ts.SyntaxKind.TildeToken, right),
-    ));
+    return factory.createParenthesizedExpression(
+      factory.createBinaryExpression(
+        left,
+        factory.createToken(ts.SyntaxKind.AmpersandToken),
+        factory.createPrefixUnaryExpression(ts.SyntaxKind.TildeToken, right),
+      ),
+    );
   }
 
   // (left | right)
-  return factory.createParenthesizedExpression(factory.createBinaryExpression(
-    left,
-    factory.createToken(ts.SyntaxKind.BarToken),
-    right,
-  ));
+  return factory.createParenthesizedExpression(
+    factory.createBinaryExpression(left, factory.createToken(ts.SyntaxKind.BarToken), right),
+  );
 }
 
-function transformEnumValuesExpression(factory: ts.NodeFactory, node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node {
+function transformEnumValuesExpression(
+  factory: ts.NodeFactory,
+  node: ts.CallExpression,
+  typeChecker: ts.TypeChecker,
+): ts.Node {
   if (!node.typeArguments) {
     return factory.createArrayLiteralExpression([]);
   }
@@ -355,8 +420,7 @@ function isApiImportExpression(node: ts.Node, typeChecker: ts.TypeChecker): node
     return false;
   }
   const declarations = moduleType.getDeclarations();
-  return !!declarations && !!declarations[0]
-    && isApiModulePath(declarations[0].getSourceFile().fileName);
+  return !!declarations && !!declarations[0] && isApiModulePath(declarations[0].getSourceFile().fileName);
 }
 
 function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMethod | undefined {
@@ -373,8 +437,12 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMe
     }
     declaration = signature.declaration;
   }
-  if (declaration && ts.isFunctionDeclaration(declaration)
-    && isApiModulePath(declaration.getSourceFile().fileName) && !!declaration.name) {
+  if (
+    declaration &&
+    ts.isFunctionDeclaration(declaration) &&
+    isApiModulePath(declaration.getSourceFile().fileName) &&
+    !!declaration.name
+  ) {
     const text = declaration.name.getText();
     if (!text.startsWith("$") && typeof ApiMethod[text as any] === "number") {
       return ApiMethod[text as any] as unknown as ApiMethod;
@@ -385,8 +453,7 @@ function getApiExpressionName(node: ts.Node, typeChecker: ts.TypeChecker): ApiMe
 
 function getArgumentCount(method: ApiMethod) {
   const countDef = apiArgCountMap[method];
-  let minArgCount
-    , argCount;
+  let minArgCount, argCount;
 
   if (typeof countDef === "number" && countDef >= 0) {
     minArgCount = argCount = countDef;
