@@ -4,6 +4,12 @@
     "target": "esnext",
     "module": "node16",
     "moduleResolution": "node16",
+    "lib": [
+      "esnext",
+    ],
+    "types": [
+      "node",
+    ],
     "strict": true,
     "esModuleInterop": true,
     "strictNullChecks": true,

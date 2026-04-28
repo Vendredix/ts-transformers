@@ -62,7 +62,6 @@ if (isArray(value)) {
   const stringValues = value.filter<string>(isString);
 }
 if (isObject(value)) {
-  // eslint-disable-next-line no-prototype-builtins
   console.log(value.hasOwnProperty("prop")); // value is an object and not null
 }
 
@@ -97,7 +96,7 @@ if (isSymbol(value)) {
   value = updateRead(unsetBits);
   const foo = updateRead(isBitSet);
 
-  function updateRead(method) {
+  function updateRead(method: (value: any, permission: Permissions) => any) {
     return method(value, Permissions.READ);
   }
 })();

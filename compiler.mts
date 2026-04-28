@@ -43,7 +43,6 @@ class Builder {
   public async build(): Promise<ts.ExitStatus> {
     let exitStatus: ts.ExitStatus = ts.ExitStatus.Success;
 
-    // eslint-disable-next-line no-cond-assign
     while (this.#currentProject = this.#builder.getNextInvalidatedProject()) {
       const project = this.#currentProject;
       const projectDir = path.dirname(project.project);

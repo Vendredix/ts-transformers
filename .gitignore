@@ -36,9 +36,11 @@ Thumbs.db
 /*.js
 /*.mjs.map
 /*.mjs
-!.eslintrc.js
+!eslint.config.mjs
+!prettier.config.mjs
 /*.d.ts
 /*.d.mts
 /tests/*.js
 /tests/*.js.map
 /tests/*.d.ts
+*.tsbuildinfo
